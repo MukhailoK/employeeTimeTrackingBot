@@ -28,4 +28,20 @@ public class Ua implements Language {
     public String responseAboutHours() {
         return ", вкажи скільки годин ти сьогодні працював";
     }
+
+    @Override
+    public String getLanguage() {
+        return "uk";
+    }
+
+    @Override
+    public String getHoursMessage(int hours) {
+        return "В тебе є " + hours + " годин, гарна робота!";
+    }
+
+    @Override
+    public String greatJob() {
+        return ", гарана робота! " +
+                "Я запишу твої години.";
+    }
 }

@@ -6,17 +6,21 @@ import com.bot.employeeTimeTracongBot.lang.Language;
 import com.bot.employeeTimeTracongBot.lang.Ua;
 import com.bot.employeeTimeTracongBot.utils.KeyboardUtils;
 import keys.Key;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.*;
 
 @Component
 public class TimeTrackingBot extends TelegramLongPollingBot {
+    private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
     Set<String> listOfChatIds = new HashSet<>();
     Map<Integer, Integer> data = new HashMap<>();
     Integer day = 1;
@@ -25,25 +29,33 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         String language = update.getMessage().getFrom().getLanguageCode();
         Language languageBot;
-        System.out.println(language);
+        logger.atInfo().log("user language - " + language);
         languageBot = switch (language) {
             case "uk" -> new Ua();
             case "de" -> new En();
             default -> new En();
         };
-        System.out.println(languageBot.hello());
+        logger.atInfo().log("app language - " + languageBot.getLanguage());
 
-        String user = update.getMessage().getFrom().getFirstName();
+
+        String firstName = update.getMessage().getFrom().getFirstName();
+        String lastName = update.getMessage().getFrom().getLastName();
+        String chatId = String.valueOf(update.getMessage().getChatId());
+        User user = new User();
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setId(Long.valueOf(chatId));
+
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
-            String chatId = String.valueOf(update.getMessage().getChatId());
             listOfChatIds.add(chatId);
             System.out.println(listOfChatIds.size());
             System.out.println(chatId);
+
             if (messageText.equals("/start")) {
                 sendMainMenu(chatId, languageBot);
                 sendMessage(languageBot.hello(), chatId);
-                sendMessage(user + languageBot.responseAboutHours(), chatId);
+                sendMessage(firstName + languageBot.responseAboutHours(), chatId);
 
             } else if (messageText.equals(languageBot.myStats())) {
                 Collection<Integer> values = data.values();
@@ -51,18 +63,18 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
                 for (Integer s : values) {
                     sum += s;
                 }
-                sendMessage((user + ", ти напрацював " + sum + " годин"), chatId);
+                sendMessage(languageBot.getHoursMessage(sum), chatId);
                 // Опрацьовуємо команду "Моя статистика"
                 // Отримуємо дані з Google Таблиці і відправляємо їх користувачу
-            } else if (messageText.equals(languageBot.buttonSettings())) {
-
+            } else {
+                languageBot.buttonSettings();
                 // Опрацьовуємо команду "Відправити"
                 // Записуємо дані в Google Таблицю
             }
 
             if (messageText.matches("^\\d+$")) {
                 data.put(day++, Integer.valueOf(messageText));
-                sendMessage(user + ", ти молодець ", chatId);
+                sendMessage(firstName + " " + languageBot.greatJob(), chatId);
                 System.out.println(update.getMessage().getText());
                 System.out.println(data.size());
                 System.out.println(data.size());

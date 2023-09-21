@@ -6,6 +6,9 @@ public interface Language {
     String buttonSettings();
     String myStats();
     String responseAboutHours();
+    String getLanguage();
+    String getHoursMessage(int hours);
+    String greatJob();
 
 
 }
