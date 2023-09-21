@@ -23,7 +23,7 @@ public class KeyboardUtils {
         row.add(new KeyboardButton(language.myStats()));
 
         // Додайте кнопку "Відправити"
-        row.add(new KeyboardButton(language.buttonSend()));
+        row.add(new KeyboardButton(language.buttonSettings()));
 
         // Додайте рядок кнопок до клавіатури
         keyboard.add(row);

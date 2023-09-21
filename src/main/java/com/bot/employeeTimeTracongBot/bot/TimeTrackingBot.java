@@ -6,18 +6,18 @@ import com.bot.employeeTimeTracongBot.lang.Language;
 import com.bot.employeeTimeTracongBot.lang.Ua;
 import com.bot.employeeTimeTracongBot.utils.KeyboardUtils;
 import keys.Key;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class TimeTrackingBot extends TelegramLongPollingBot {
+    Set<String> listOfChatIds = new HashSet<>();
     Map<Integer, Integer> data = new HashMap<>();
     Integer day = 1;
 
@@ -31,14 +31,17 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             case "de" -> new En();
             default -> new En();
         };
-
         System.out.println(languageBot.hello());
 
         String user = update.getMessage().getFrom().getFirstName();
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             String chatId = String.valueOf(update.getMessage().getChatId());
+            listOfChatIds.add(chatId);
+            System.out.println(listOfChatIds.size());
+            System.out.println(chatId);
             if (messageText.equals("/start")) {
+                sendMainMenu(chatId, languageBot);
                 sendMessage(languageBot.hello(), chatId);
                 sendMessage(user + languageBot.responseAboutHours(), chatId);
 
@@ -51,19 +54,19 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
                 sendMessage((user + ", ти напрацював " + sum + " годин"), chatId);
                 // Опрацьовуємо команду "Моя статистика"
                 // Отримуємо дані з Google Таблиці і відправляємо їх користувачу
-            } else if (messageText.equals(languageBot.buttonSend())) {
+            } else if (messageText.equals(languageBot.buttonSettings())) {
 
                 // Опрацьовуємо команду "Відправити"
                 // Записуємо дані в Google Таблицю
             }
 
-
-            data.put(day++, Integer.valueOf(messageText));
-            sendMessage(user + ", ти молодець ", chatId);
-
-            System.out.println(update.getMessage().getText());
-            System.out.println(data.size());
-            System.out.println(data.size());
+            if (messageText.matches("^\\d+$")) {
+                data.put(day++, Integer.valueOf(messageText));
+                sendMessage(user + ", ти молодець ", chatId);
+                System.out.println(update.getMessage().getText());
+                System.out.println(data.size());
+                System.out.println(data.size());
+            }
         }
     }
 
@@ -76,6 +79,31 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+    }
+
+    @Scheduled(cron = "0 0 19 * * ?")
+    public void sendDailyMessageToAllUsers() {
+        System.out.println("Метод викликається");
+        // Отримайте список користувачів бота і відправте їм повідомлення
+        // Для прикладу, ми відправляємо повідомлення за допомогою методу SendMessage
+
+        // Отримайте список користувачів (ідентифікатори чатів) із вашої бази даних або іншого джерела
+
+        // Переберіть всі ідентифікатори чатів і відправте їм повідомлення
+
+
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId("809245011");
+        sendMessage.setText("повідомлення кожні 5 секунд");
+        System.out.println("повідомлення кожні 5 секунд");
+
+        // Відправте повідомлення
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     private void sendMainMenu(String chatId, Language language) {

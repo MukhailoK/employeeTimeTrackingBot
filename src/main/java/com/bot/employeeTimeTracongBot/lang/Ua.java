@@ -9,14 +9,14 @@ public class Ua implements Language {
 
     @Override
     public String hello() {
-        return "Вітаю, я бот який створений " +
+        return "Вітаю, я бот " +
                 "для записування та підрахунку" +
                 " кількості робочих годин!";
     }
 
     @Override
-    public String buttonSend() {
-        return "Відправити";
+    public String buttonSettings() {
+        return "Налаштування";
     }
 
     @Override

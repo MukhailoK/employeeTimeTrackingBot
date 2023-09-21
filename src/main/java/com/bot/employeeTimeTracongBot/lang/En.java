@@ -8,12 +8,12 @@ public class En implements Language {
 
     @Override
     public String hello() {
-        return "Hello, I'm a bot for calculate work hours!";
+        return "Hello, I'm a bot for writing and calculate work hours!";
     }
 
     @Override
-    public String buttonSend() {
-        return "Send";
+    public String buttonSettings() {
+        return "Settings";
     }
 
     @Override
