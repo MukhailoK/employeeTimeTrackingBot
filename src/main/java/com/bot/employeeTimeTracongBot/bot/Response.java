@@ -5,9 +5,14 @@ import com.bot.employeeTimeTracongBot.utils.KeyboardUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Response {
@@ -23,29 +28,66 @@ public class Response {
 //         Налаштуйте клавіатуру з кнопками
         return message;
     }
-    public SendMessage sendListOfObjects(String chatId, List<List<InlineKeyboardButton>> rowsInline, List<InlineKeyboardButton> rowInline) {
+
+    public SendMessage sendListOfObjects(String message_, long chatId, List<List<InlineKeyboardButton>> rowsInline) {
         SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setText("Кнопки-посилання");
+        message.setChatId(String.valueOf(chatId));
+        message.setText(message_);
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-//        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-//        List<InlineKeyboardButton> rowInline = new ArrayList<>();
-        InlineKeyboardButton butt = new InlineKeyboardButton();
-        butt.setText("Google");
-        butt.setUrl("https://www.google.com");
-        rowInline.add(butt);
-        rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
         message.setReplyMarkup(markupInline);
-
-        // Відправляємо повідомлення
-       return message;
+        return message;
     }
-    public SendMessage sendMessage(String message_, String chatId) {
+
+    public SendMessage sendMessage(String message_, long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(message_);
+        return message;
+    }
+
+    public DeleteMessage deleteLastBotMessage(Update update) {
+        if (update.hasMessage() && update.getMessage().hasViaBot()) {
+            Message botMessage = update.getMessage();
+            Long chatId = botMessage.getChatId();
+            Integer messageId = botMessage.getMessageId();
+
+            DeleteMessage deleteMessage = new DeleteMessage(chatId.toString(), messageId);
+
+            return deleteMessage;
+        }
+        return null;
+    }
+    public SendMessage sendMessageWithButton(long chatId, String message_, String title, String resultPushButton) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(message_);
+        message.setReplyMarkup(createButton(title, resultPushButton));
+        return message;
+
+    }
+
+    public InlineKeyboardMarkup createButton(String title, String result) {
+        InlineKeyboardButton registerButton = new InlineKeyboardButton();
+        registerButton.setText(title);
+        registerButton.setCallbackData(result);
+
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(registerButton);
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+        keyboard.add(row);
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(keyboard);
+
+        return markup;
+    }
+
+    public SendMessage sendRegistrationResponse(String chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText(message_);
-      return message;
+        message.setText("Ви були успішно зареєстровані!");
+        return message;
     }
-
 }

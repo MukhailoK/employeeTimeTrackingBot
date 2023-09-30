@@ -15,7 +15,7 @@ public class User {
     private boolean isSendReport;
     private String name;
     private String dateConnecting;
-    private int chatId;
+    private long chatId;
     private String nickName;
     private String fullName;
     private String dateLastReport;

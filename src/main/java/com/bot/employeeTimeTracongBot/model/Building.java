@@ -1,14 +1,12 @@
 package com.bot.employeeTimeTracongBot.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 public class Building {
     private String address;
     private Boolean isActiv;

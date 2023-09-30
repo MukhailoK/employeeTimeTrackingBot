@@ -32,7 +32,7 @@ public class SheetsTransformer {
             if (cells.get(4).toString().isBlank()) {
                 user.setChatId(0);
             } else {
-                user.setChatId(Integer.parseInt(cells.get(4).toString()));
+                user.setChatId(Long.parseLong(cells.get(4).toString()));
             }
         }
         if (size >= 6) {

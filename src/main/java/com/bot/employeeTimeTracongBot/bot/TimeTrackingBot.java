@@ -1,156 +1,136 @@
 package com.bot.employeeTimeTracongBot.bot;
 
+import com.bot.employeeTimeTracongBot.service.SheetsService;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import com.bot.employeeTimeTracongBot.service.UserService;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.Update;
 import com.bot.employeeTimeTracongBot.data.SheetsName;
-import com.bot.employeeTimeTracongBot.google.SheetsService;
-import com.bot.employeeTimeTracongBot.lang.En;
-import com.bot.employeeTimeTracongBot.lang.Language;
-import com.bot.employeeTimeTracongBot.lang.Ua;
 import com.bot.employeeTimeTracongBot.model.Building;
 import com.bot.employeeTimeTracongBot.model.User;
-import com.bot.employeeTimeTracongBot.transformer.SheetsTransformer;
-import keys.Key;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Update;
-
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import java.time.format.DateTimeFormatter;
+
+import org.slf4j.LoggerFactory;
+
+import java.time.LocalDateTime;
+
+import org.slf4j.Logger;
+
 import java.util.*;
+
+import keys.Key;
 
 @Component
 public class TimeTrackingBot extends TelegramLongPollingBot {
-    private final Response response = new Response();
-    private final SheetsTransformer transformer = new SheetsTransformer();
-    private SheetsService sheetsService = new SheetsService();
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
-    Language languageBot = new En();
-    private List<Building> buildingList = new ArrayList<>();
-
+    private final SheetsService sheetsService = new SheetsService();
+    private final UserService userService = new UserService();
+    private Map<Long, Long> chatIdMap = new HashMap<>();
+    private final Response response = new Response();
+    User user = new User();
+    Message message = null;
 
     @Override
     public void onUpdateReceived(Update update) {
+
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
-            String chatId = String.valueOf(update.getMessage().getChatId());
+            long chatId = update.getMessage().getChatId(); // Отримати початковий chatId
+            message = update.getMessage();
 
-            User user = registration(update);
-            assert user != null;
-            User userFromTable = sheetsService.readUserDataFromTableByFullName(user.getName());
-
-            if (messageText.equals("/start") &&
-                    checkAccess(user, userFromTable)) {
+            user.setName(update.getMessage().getFrom().getFirstName() +
+                    " " + update.getMessage().getFrom().getLastName());
+            if (messageText.equals("/start")) {
+                sendMorningDailyMessageToAllUsers();
+                sendDailyMessageToAllUsers();
                 logger.info("command -> /start");
-                logger.info("chat user id from Table -> " + userFromTable.getChatId());
-
-                setBotLanguage(update);
-
-                logger.atInfo().log("Chat id: " + chatId);
                 executeMessage(response
-                        .sendMessage(languageBot.hello(), chatId));
-                executeMessage(response
-                        .sendMessage(userFromTable.getFullName() + languageBot.responseAboutHours(), chatId));
+                        .sendMessageWithButton(Long.parseLong(String.valueOf(chatId))
+                                , "Зареєструватися?", "Так", "yes"));
+                chatIdMap.put(chatId, chatId); // Зберегти початковий chatId
             }
-            if (messageText.matches("^\\d+$")
-                    && userFromTable.isSendReport()) {
-                user.setHours(Integer.parseInt(messageText));
-                user.setDateLastReport(LocalDateTime.now()
-                        .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")));
+        }
+        if (update.hasCallbackQuery()) {
+            String callbackData = update.getCallbackQuery().getData();
 
+            if ("yes".equals(callbackData)) {
+                long chatId = chatIdMap.get(update.getCallbackQuery().getMessage().getChatId()); // Отримати початковий chatId
+                if (!sheetsService.isPresent(chatId)) {
+                    User user = userService.registration(message);
+                    if (user != null) {
+                        // Відповідь на натискання кнопки з використанням початкового chatId
+                        executeMessage(response
+                                .sendRegistrationResponse(String.valueOf(chatId)));
+                    } else {
+                        executeMessage(response
+                                .sendMessage("Помилка!", chatId));
+                    }
+                } else {
+                    executeMessage(response
+                            .sendMessage("Тебе вже зареєстровано!", chatId));
+                }
+            }
+        }
+        User userFromTable;
+
+        if (update.hasCallbackQuery() && "first".equals(update.getCallbackQuery().getData())) {
+            userFromTable = sheetsService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
+            List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+            List<Building> buildings = sheetsService.getAllActualBuilding();
+            for (Building building : buildings) {
+                List<InlineKeyboardButton> rowLine = new ArrayList<>();
+                InlineKeyboardButton button = new InlineKeyboardButton();
+                button.setText(building.getAddress());
+                button.setCallbackData(building.getAddress());
+                rowLine.add(button);
+                rowsInLine.add(rowLine);
+            }
+
+            executeMessage(response.sendListOfObjects("Вибери об'єкт: ", userFromTable.getChatId(), rowsInLine));
+        }
+        List<Building> buildings = sheetsService.getAllActualBuilding();
+        for (Building building : buildings) {
+            if (update.hasCallbackQuery() && building.getAddress().equals(update.getCallbackQuery().getData())) {
+                userFromTable = sheetsService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
                 sheetsService.writeNext(SheetsName.REPORTS, "!A", "!A", new ArrayList<>(Arrays
                         .asList(LocalDateTime.now()
-                                        .format(DateTimeFormatter.ofPattern("dd.MM.yyyy hh:mm:ss")),
-                                LocalDate.now()
-                                        .format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
-                                chatId,
-                                userFromTable.getName(),
+                                        .format(DateTimeFormatter.ofPattern("dd.MM.yyyy'T'HH:mm:ss")),
                                 "",
-                                messageText)));
+                                userFromTable.getChatId(),
+                                userFromTable.getName(),
+                                building.getAddress(),
+                                "")));
+                executeMessage(response.sendMessage("Бажаю гарного робочого дня!", userFromTable.getChatId()));
+            }
+        }
+        if (update.hasCallbackQuery() && "second".equals(update.getCallbackQuery().getData())) {
 
-                logger.info("send to google sheet: " + user.getName() + " " + user.getHours());
-                executeMessage(response.sendMessage(userFromTable.getFullName() + languageBot.greatJob(), chatId));
+            userFromTable = sheetsService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
+            executeMessage(response
+                    .sendMessage("Вкажи свої години"
+                            , userFromTable.getChatId()));
+        }
+        if (update.hasMessage() && (Double.parseDouble(update.getMessage().getText()) > 0)) {
+            userFromTable = sheetsService.readUserFromTableByChatId(update.getMessage().getChatId());
+            boolean isSend = sheetsService.writeNext(SheetsName.REPORTS, "!A", "!A", new ArrayList<>(Arrays
+                    .asList("",
+                            LocalDateTime.now()
+                                    .format(DateTimeFormatter.ofPattern("dd.MM.yyyy'T'HH:mm:ss")),
+                            userFromTable.getChatId(),
+                            userFromTable.getName(),
+                            "",
+                            update.getMessage().getText())));
+            if (isSend) {
+                executeMessage(response.sendMessage("Звіт успішно відправлено", userFromTable.getChatId()));
             }
         }
     }
 
-    private User registration(Update update) {
-        String chatId = String.valueOf(update.getMessage().getChatId());
-        String firstName = update.getMessage().getFrom().getFirstName();
-        String lastName = update.getMessage().getFrom().getLastName();
-        String nickName = update.getMessage().getFrom().getUserName();
-
-        String name = firstName + " " + (lastName != null ? lastName : "");
-        name = name.trim();
-        User user = new User();
-        logger.info(name);
-        User userFromTable = sheetsService.readUserDataFromTableByFullName(name);
-        if (userFromTable != null) {
-            user.setName(name);
-            logger.info("User from Table -> " + userFromTable);
-            user.setChatId(Integer.parseInt(chatId));
-            user.setFullName(userFromTable.getFullName());
-            user.setNickName(nickName);
-            user.setAccess(userFromTable.isAccess());
-            user.setSendReport(userFromTable.isSendReport());
-            user.setDateLastReport(null);
-            sheetsService.writeNext(SheetsName.LOGS, "!A", "!A", transformer.transformToData(user));
-            if (userFromTable.getDateConnecting() == null) {
-                user.setDateConnecting(LocalDate.now().toString());
-            } else {
-                user.setDateConnecting(userFromTable.getDateConnecting());
-            }
-            sheetsService.writeToTable(SheetsName.USERS, user);
-            logger.info("user from telegram ->" + user);
-            return user;
-        } else
-            return null;
-    }
-
-    private boolean checkAccess(User user, User userFromTable) {
-        return (userFromTable.getNickName() != null &&
-                user.getNickName() != null &&
-                user.getNickName().equals(userFromTable.getNickName())) ||
-                (userFromTable.getChatId() != 0 &&
-                        user.getChatId() != 0 &&
-                        user.getChatId() == userFromTable.getChatId()) ||
-                (userFromTable.getName() != null &&
-                        user.getName() != null &&
-                        user.getName().equals(userFromTable.getName())) &&
-                        userFromTable.isAccess();
-    }
-
-    private void setBotLanguage(Update update) {
-        String language = update.getMessage().getFrom().getLanguageCode();
-        logger.atInfo().log("user language - " + language);
-        languageBot = switch (language) {
-            case "uk" -> new Ua();
-            default -> new En();
-        };
-        logger.atInfo().log("app language - " + languageBot.getLanguage());
-    }
-
-    @Scheduled(cron = "0 0 19 * * ?")
-    public void sendDailyMessageToAllUsers() {
-        logger.atInfo().log("start sending notification");
-        // Отримайте список користувачів бота і відправте їм повідомлення
-        // Для прикладу, ми відправляємо повідомлення за допомогою методу SendMessage
-
-        // Отримайте список користувачів (ідентифікатори чатів) із вашої бази даних або іншого джерела
-
-        // Переберіть всі ідентифікатори чатів і відправте їм повідомлення
-
-
-        executeMessage(response.sendMessage(languageBot.responseAboutHours(), "809245011"));
-
-        logger.atInfo().log("end sending notification");
-    }
 
     private void executeMessage(SendMessage message) {
         try {
@@ -161,7 +141,6 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         }
     }
 
-
     @Override
     public String getBotUsername() {
         return Key.TELEGRAM_BOT_NAME;
@@ -170,5 +149,52 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
     @Override
     public String getBotToken() {
         return Key.TELEGRAM_TOKEN;
+    }
+
+    //    @Scheduled(cron = "0 0 7 * * ?")
+    public void sendDailyMessageToAllUsers() {
+        logger.atInfo().log("start sending notification");
+
+        List<User> userList = sheetsService.getAllActualUsers();
+
+        for (User user : userList) {
+
+            executeMessage(response
+                    .sendMessageWithButton(user.getChatId(),
+                            "Доброго вечора, " + user.getName() + " пропоную закрити зміну \n " +
+                                    "У цьому місяці: " + sheetsService.getTotalMouthHoursForUser(user.getChatId()) + " годин"
+                            , "💪 Закрити"
+                            , "second"));
+            executeMessage(response.sendMessageWithButton(user.getChatId(),
+                    "Якщо ти сьогодні не працюєш, можеш натиснути ігнор"
+                    , "✋ Ігнор"
+                    , "ignor"));
+
+        }
+
+        logger.atInfo().log("end sending notification");
+    }
+
+    //    @Scheduled(cron = "0 0 17 * * ?")
+    public void sendMorningDailyMessageToAllUsers() {
+        logger.atInfo().log("start sending morning notification");
+        List<User> userList = sheetsService.getAllActualUsers();
+
+        for (User user : userList) {
+
+            executeMessage(response
+                    .sendMessageWithButton(user.getChatId(),
+                            "Доброго ранку, " + user.getName() + " пропоную відкрити зміну \n " +
+                                    "У цьому місяці: " + sheetsService.getTotalMouthHoursForUser(user.getChatId()) + " годин"
+                            , "💪 Відкрити"
+                            , "first"));
+            executeMessage(response.sendMessageWithButton(user.getChatId(),
+                    "Якщо ти сьогодні не працюєш, можеш натиснути ігнор"
+                    , "✋ Ігнор"
+                    , "ignor"));
+
+        }
+
+        logger.atInfo().log("end sending notification");
     }
 }
