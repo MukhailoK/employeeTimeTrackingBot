@@ -19,9 +19,9 @@ public class User {
     private String nickName;
     private String fullName;
     private String dateLastReport;
-    private int hours;
+    private double hours;
 
-    public User(boolean access, boolean isSendReport, String name, String dateConnecting, int chatId, String nickName, String fullName, String dateLastReport, int hours) {
+    public User(boolean access, boolean isSendReport, String name, String dateConnecting, int chatId, String nickName, String fullName, String dateLastReport, double hours) {
         this.access = access;
         this.isSendReport = isSendReport;
         this.name = name;

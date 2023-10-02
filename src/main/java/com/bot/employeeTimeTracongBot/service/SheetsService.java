@@ -15,9 +15,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.LongStream;
 
 public class SheetsService extends MySheets {
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
@@ -133,7 +137,12 @@ public class SheetsService extends MySheets {
 
         try {
             // Оновлення даних в таблиці
-            UpdateValuesResponse result = sheets.spreadsheets().values().update(spreadsheetId, sheetName + "!A" + getIndexOfRow(sheetName, user.getName()) + ":I", body).setValueInputOption("RAW").execute();
+            UpdateValuesResponse result = sheets.spreadsheets()
+                    .values()
+                    .update(spreadsheetId,
+                            sheetName + "!A" + getIndexOfRow(sheetName, user.getName()) + ":I",
+                            body).setValueInputOption("RAW")
+                    .execute();
 
             return result.isEmpty();
         } catch (IOException e) {
@@ -167,7 +176,7 @@ public class SheetsService extends MySheets {
     }
 
     public List<User> getAllActualUsers() {
-        String range = SheetsName.USERS + "!A2:I"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
+        String range = SheetsName.USERS + "!A2:I";
         Sheets sheets = sheetsService();
         ValueRange response;
         try {
@@ -241,4 +250,45 @@ public class SheetsService extends MySheets {
         return 0;
     }
 
+    public boolean updateReport(long chatId, double hours) {
+        String range = SheetsName.REPORTS + "!A2:I";
+        Sheets sheets = sheetsService();
+        ValueRange response;
+        try {
+            response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        List<List<Object>> values = response.getValues();
+        for (int i = 0; i < values.size(); i++) {
+            List<Object> row = values.get(i);
+            if (row.size() >= 3 && Long.parseLong(row.get(2).toString()) == chatId) {
+                if (row.get(1) == null || row.get(1).toString().isEmpty()) {
+                    String range1 = "!A" + (2 + i); // Оновити комірку "Дата і час прийшов" у відповідному рядку
+                    String updateRange = SheetsName.REPORTS + range1;
+                    row.set(2, Long.parseLong(String.valueOf(row.get(2))));
+                    row.set(1, String.valueOf(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"))));
+                    row.add(5, hours);
+
+                    // Оновити лише конкретний рядок у таблиці
+                    ValueRange updateBody = new ValueRange().setValues(Collections.singletonList(row));
+                    UpdateValuesResponse result;
+                    try {
+                        result = sheets.spreadsheets()
+                                .values()
+                                .update(spreadsheetId, updateRange, updateBody)
+                                .setValueInputOption("RAW")
+                                .execute();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    logger.info("Report update is " + (result.isEmpty() ? "failed" : "successful"));
+                    return !result.isEmpty();
+                }
+            }
+        }
+        logger.info("Report update failed");
+        return false;
+    }
 }

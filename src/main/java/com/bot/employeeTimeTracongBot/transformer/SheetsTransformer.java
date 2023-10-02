@@ -45,7 +45,7 @@ public class SheetsTransformer {
             user.setDateLastReport(cells.get(7).toString());
         }
         if (size >= 9) {
-            user.setHours(Integer.parseInt(String.valueOf(cells.get(8))));
+            user.setHours(Double.parseDouble(String.valueOf(cells.get(8))));
         }
         return user;
     }

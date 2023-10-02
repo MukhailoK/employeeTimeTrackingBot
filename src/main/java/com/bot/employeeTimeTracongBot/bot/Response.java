@@ -1,6 +1,8 @@
 package com.bot.employeeTimeTracongBot.bot;
 
 import com.bot.employeeTimeTracongBot.lang.Language;
+import com.bot.employeeTimeTracongBot.model.Building;
+import com.bot.employeeTimeTracongBot.service.SheetsService;
 import com.bot.employeeTimeTracongBot.utils.KeyboardUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +19,7 @@ import java.util.List;
 
 public class Response {
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
-
+    SheetsService sheetsService = new SheetsService();
 
     public SendMessage sendMainMenu(String chatId, Language language) {
         SendMessage message = new SendMessage();
@@ -58,6 +60,7 @@ public class Response {
         }
         return null;
     }
+
     public SendMessage sendMessageWithButton(long chatId, String message_, String title, String resultPushButton) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
@@ -89,5 +92,19 @@ public class Response {
         message.setChatId(chatId);
         message.setText("Ви були успішно зареєстровані!");
         return message;
+    }
+
+    public List<List<InlineKeyboardButton>> getRowsInLine() {
+        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+        List<Building> buildings = sheetsService.getAllActualBuilding();
+        for (Building building : buildings) {
+            List<InlineKeyboardButton> rowLine = new ArrayList<>();
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(building.getAddress());
+            button.setCallbackData(building.getAddress());
+            rowLine.add(button);
+            rowsInLine.add(rowLine);
+        }
+        return rowsInLine;
     }
 }
