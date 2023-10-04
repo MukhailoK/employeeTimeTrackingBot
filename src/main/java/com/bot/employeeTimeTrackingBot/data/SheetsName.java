@@ -1,4 +1,4 @@
-package com.bot.employeeTimeTracongBot.data;
+package com.bot.employeeTimeTrackingBot.data;
 
 public class SheetsName {
     public static final String USERS = "Користувачі";

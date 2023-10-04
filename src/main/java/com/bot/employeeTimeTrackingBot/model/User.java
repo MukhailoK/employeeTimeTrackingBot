@@ -1,4 +1,4 @@
-package com.bot.employeeTimeTracongBot.model;
+package com.bot.employeeTimeTrackingBot.model;
 
 import lombok.*;
 
@@ -8,9 +8,7 @@ import lombok.*;
 @ToString
 @AllArgsConstructor
 public class User {
-    @Setter
     private boolean access;
-    @Setter
     private boolean isSendReport;
     private String name;
     private String dateConnecting;

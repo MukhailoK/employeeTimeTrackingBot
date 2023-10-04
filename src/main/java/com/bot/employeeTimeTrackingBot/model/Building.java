@@ -1,4 +1,4 @@
-package com.bot.employeeTimeTracongBot.model;
+package com.bot.employeeTimeTrackingBot.model;
 
 import lombok.*;
 

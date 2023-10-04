@@ -1,29 +1,17 @@
-package com.bot.employeeTimeTracongBot.bot;
+package com.bot.employeeTimeTrackingBot.bot;
 
-import com.bot.employeeTimeTracongBot.model.Building;
-import com.bot.employeeTimeTracongBot.service.SheetsService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.bot.employeeTimeTrackingBot.model.Building;
+import com.bot.employeeTimeTrackingBot.service.SheetsService;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.ResourceBundle;
+import java.util.*;
 
 public class Response {
-    private static final Logger logger = LoggerFactory.getLogger(Response.class);
-    private static final Locale defaultLocale = Locale.ENGLISH; // За замовчуванням використовуємо англійську мову
-    private static final ResourceBundle defaultResourceBundle = ResourceBundle.getBundle("messages", defaultLocale);
-    private static final ResourceBundle ukrainianResourceBundle = ResourceBundle.getBundle("messages", new Locale("uk"));
-    private static final ResourceBundle russianResourceBundle = ResourceBundle.getBundle("messages", new Locale("ru"));
     SheetsService sheetsService = new SheetsService();
 
     public SendMessage sendListOfObjects(String message_, long chatId, List<List<InlineKeyboardButton>> rowsInline) {
@@ -47,10 +35,7 @@ public class Response {
         if (message != null && message.getFrom().getIsBot()) {
             Long chatId = message.getChatId();
             Integer messageId = message.getMessageId();
-
-            DeleteMessage deleteMessage = new DeleteMessage(chatId.toString(), messageId);
-
-            return deleteMessage;
+            return new DeleteMessage(chatId.toString(), messageId);
         }
         return null;
     }
@@ -84,11 +69,11 @@ public class Response {
     public SendMessage sendRegistrationResponse(Update update) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(update.getMessage().getChatId()));
-        message.setText(getString("registration_success", getLanguage(update)));
+        message.setText(getString("registration_success", String.valueOf(determineUserLocale(update.getMessage().getFrom().getLanguageCode()))));
         return message;
     }
 
-    public List<List<InlineKeyboardButton>> getRowsInLine() {
+    public List<List<InlineKeyboardButton>> getRowsInLineWithBuildings() {
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
         List<Building> buildings = sheetsService.getAllActualBuilding();
         for (Building building : buildings) {
@@ -102,27 +87,42 @@ public class Response {
         return rowsInLine;
     }
 
-    private String getString(String key, Locale locale) {
-        ResourceBundle resourceBundle = defaultResourceBundle;
-        if (locale.equals(new Locale("uk"))) {
-            resourceBundle = ukrainianResourceBundle;
-        } else if (locale.equals(new Locale("ru"))) {
-            resourceBundle = russianResourceBundle;
-        }
-        return resourceBundle.getString(key);
+    public List<List<InlineKeyboardButton>> getInterfaceMenu(Update update) {
+        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+        List<InlineKeyboardButton> firstRow = new ArrayList<>();
+        InlineKeyboardButton button1 = new InlineKeyboardButton();
+        button1.setText(getString("back", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode().toString()))));
+        button1.setCallbackData("back");
+        firstRow.add(button1);
+        rowsInLine.add(firstRow);
+
+        InlineKeyboardButton button2 = new InlineKeyboardButton();
+        button2.setText(getString("accept", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode().toString()))));
+        button2.setCallbackData("accept");
+        List<InlineKeyboardButton> secondRow = new ArrayList<>();
+        secondRow.add(button2);
+        rowsInLine.add(secondRow);
+        return rowsInLine;
     }
 
-    private Locale getLanguage(Update update) {
-        if (update.getMessage() != null && update.getMessage().getFrom() != null && update.getMessage().getFrom().getLanguageCode() != null) {
-            String languageCode = update.getMessage().getFrom().getLanguageCode();
-            if ("uk".equals(languageCode)) {
-                return new Locale("uk");
-            } else if ("ru".equals(languageCode)) {
-                return new Locale("ru");
-            }
+    private String getString(String key, String locale) {
+        Locale userLocale = determineUserLocale(locale);
+        ResourceBundle resourceBundle = ResourceBundle.getBundle("messages", userLocale);
+        try {
+            return resourceBundle.getString(key);
+        } catch (MissingResourceException e) {
+            return "Message not found for key: " + key;
         }
+    }
 
-        // За замовчуванням використовуємо англійську мову
-        return Locale.ENGLISH;
+    private Locale determineUserLocale(String locale) {
+        return switch (locale) {
+            case "uk" -> new Locale("uk");
+            case "ru" -> new Locale("ru");
+            case "de" -> new Locale("de");
+            case "pl" -> new Locale("pl");
+            case "ro" -> new Locale("ro");
+            default -> new Locale("en");
+        };
     }
 }

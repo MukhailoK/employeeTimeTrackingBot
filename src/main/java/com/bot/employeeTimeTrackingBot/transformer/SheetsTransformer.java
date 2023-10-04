@@ -1,8 +1,7 @@
-package com.bot.employeeTimeTracongBot.transformer;
+package com.bot.employeeTimeTrackingBot.transformer;
 
-import com.bot.employeeTimeTracongBot.model.User;
+import com.bot.employeeTimeTrackingBot.model.User;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -52,7 +51,9 @@ public class SheetsTransformer {
             user.setDateLastReport(cells.get(8).toString());
         }
         if (size >= 10) {
-            user.setHours(Double.parseDouble(String.valueOf(cells.get(9))));
+            String numberStr = String.valueOf(cells.get(9));
+            numberStr = numberStr.replace(',', '.');
+            user.setHours(Double.parseDouble(numberStr));
         }
 
         return user;

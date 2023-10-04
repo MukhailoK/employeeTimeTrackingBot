@@ -1,10 +1,9 @@
-package com.bot.employeeTimeTracongBot.service;
+package com.bot.employeeTimeTrackingBot.service;
 
-import com.bot.employeeTimeTracongBot.bot.TimeTrackingBot;
-import com.bot.employeeTimeTracongBot.data.SheetsName;
-import com.bot.employeeTimeTracongBot.google.MySheets;
-import com.bot.employeeTimeTracongBot.model.User;
-import com.bot.employeeTimeTracongBot.transformer.SheetsTransformer;
+import com.bot.employeeTimeTrackingBot.bot.TimeTrackingBot;
+import com.bot.employeeTimeTrackingBot.data.SheetsName;
+import com.bot.employeeTimeTrackingBot.model.User;
+import com.bot.employeeTimeTrackingBot.transformer.SheetsTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -16,8 +15,11 @@ public class UserService {
     SheetsService sheetsService = new SheetsService();
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
     SheetsTransformer transformer = new SheetsTransformer();
-    MySheets mySheets = new MySheets();
 
+    public void deleteUser(Message message){
+        long chatId = message.getChatId();
+        sheetsService.deleteUserFromTableByChatId(chatId);
+    }
     public User registration(Message message) {
         long chatId = message.getChatId();
         String firstName = message.getFrom().getFirstName();
@@ -51,18 +53,6 @@ public class UserService {
             return user;
         } else
             return null;
-    }
-
-    private boolean checkAccess(User userFromTable) {
-        boolean access = userFromTable.isAccess();
-        logger.info("Access for user " + userFromTable.getName() + " is " + (access ? "accept" : "denied"));
-        return access;
-    }
-
-    private boolean checkIsSendReports(User userFromTable) {
-        boolean access = userFromTable.isSendReport();
-        logger.info("Access to send reports for user " + userFromTable.getName() + " is " + (access ? "accept" : "denied"));
-        return access;
     }
 
 }
