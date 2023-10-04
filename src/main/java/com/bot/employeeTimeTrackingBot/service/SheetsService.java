@@ -27,7 +27,7 @@ public class SheetsService extends MySheets {
     public void deleteUserFromTableByChatId(long chatId) {
         String range = "Користувачі!A2:J"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
         Sheets sheets = sheetsService();
-        ValueRange response = null;
+        ValueRange response;
         try {
             response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
         } catch (IOException e) {

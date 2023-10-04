@@ -91,13 +91,13 @@ public class Response {
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
         List<InlineKeyboardButton> firstRow = new ArrayList<>();
         InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText(getString("back", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode().toString()))));
+        button1.setText(getString("back", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode()))));
         button1.setCallbackData("back");
         firstRow.add(button1);
         rowsInLine.add(firstRow);
 
         InlineKeyboardButton button2 = new InlineKeyboardButton();
-        button2.setText(getString("accept", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode().toString()))));
+        button2.setText(getString("accept", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode()))));
         button2.setCallbackData("accept");
         List<InlineKeyboardButton> secondRow = new ArrayList<>();
         secondRow.add(button2);
