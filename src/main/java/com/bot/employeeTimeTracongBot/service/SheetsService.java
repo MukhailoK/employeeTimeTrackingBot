@@ -18,17 +18,17 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.LongStream;
 
 public class SheetsService extends MySheets {
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
     SheetsTransformer sheetsTransformer = new SheetsTransformer();
+public void deleteUserFromTableByChatId(long chatId){
 
+}
     public User readUserFromTableByChatId(long chatId) {
-        String range = "Користувачі!A2:I"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
+        String range = "Користувачі!A2:J"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
         Sheets sheets = sheetsService();
         ValueRange response = null;
         try {
@@ -48,7 +48,7 @@ public class SheetsService extends MySheets {
             if (row.size() >= 5) {
                 logger.info("row -> " + row.get(4));
                 logger.info("chatId -> " + chatId);
-                if (Long.parseLong(row.get(4).toString()) == chatId) {
+                if (Long.parseLong(row.get(5).toString()) == chatId) {
                     logger.info("Found -> " + chatId);
                     return sheetsTransformer.transformToEntity(row);
                 }
@@ -176,7 +176,7 @@ public class SheetsService extends MySheets {
     }
 
     public List<User> getAllActualUsers() {
-        String range = SheetsName.USERS + "!A2:I";
+        String range = SheetsName.USERS + "!A2:J";
         Sheets sheets = sheetsService();
         ValueRange response;
         try {
@@ -195,13 +195,14 @@ public class SheetsService extends MySheets {
             if (row.size() >= 2 && Boolean.parseBoolean(row.get(1).toString())) {
                 usersList.add(sheetsTransformer.transformToEntity(row));
                 logger.info("Add -> " + row.get(2));
+                System.out.println(row.get(9));
             }
         }
         return usersList;
     }
 
     public boolean isPresent(long chatId) {
-        String range = SheetsName.USERS + "!A2:I";
+        String range = SheetsName.USERS + "!A2:J";
         Sheets sheets = sheetsService();
         ValueRange response;
         try {
@@ -217,8 +218,8 @@ public class SheetsService extends MySheets {
         }
 
         for (List<Object> row : values) {
-            if (row.size() >= 5 && Long.parseLong(row.get(4).toString()) == chatId) {
-                logger.info("Present chat Id -> " + row.get(4));
+            if (row.size() >= 6 && Long.parseLong(row.get(5).toString()) == chatId) {
+                logger.info("Present chat Id -> " + row.get(5));
                 return true;
             }
         }
@@ -226,7 +227,7 @@ public class SheetsService extends MySheets {
     }
 
     public int getTotalMouthHoursForUser(long chatId) {
-        String range = SheetsName.USERS + "!A2:I";
+        String range = SheetsName.USERS + "!A2:J";
         Sheets sheets = sheetsService();
         ValueRange response;
         try {
@@ -242,9 +243,9 @@ public class SheetsService extends MySheets {
         }
 
         for (List<Object> row : values) {
-            if (row.size() >= 5 && Long.parseLong(row.get(4).toString()) == chatId) {
-                logger.info("total Hours -> " + row.get(8));
-                return Integer.parseInt(row.get(8).toString());
+            if (row.size() >= 5 && Long.parseLong(row.get(5).toString()) == chatId) {
+                logger.info("total Hours -> " + row.get(9));
+                return Integer.parseInt(row.get(9).toString());
             }
         }
         return 0;

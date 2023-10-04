@@ -3,15 +3,11 @@ package com.bot.employeeTimeTracongBot.service;
 import com.bot.employeeTimeTracongBot.bot.TimeTrackingBot;
 import com.bot.employeeTimeTracongBot.data.SheetsName;
 import com.bot.employeeTimeTracongBot.google.MySheets;
-import com.bot.employeeTimeTracongBot.lang.En;
-import com.bot.employeeTimeTracongBot.lang.Language;
-import com.bot.employeeTimeTracongBot.lang.Ua;
 import com.bot.employeeTimeTracongBot.model.User;
 import com.bot.employeeTimeTracongBot.transformer.SheetsTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -21,7 +17,6 @@ public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
     SheetsTransformer transformer = new SheetsTransformer();
     MySheets mySheets = new MySheets();
-    private Language languageBot;
 
     public User registration(Message message) {
         long chatId = message.getChatId();
@@ -38,13 +33,14 @@ public class UserService {
         if (userFromTable == null) {
             user.setName(name);
             user.setChatId(chatId);
-            user.setFullName(null);
+            user.setFullName("New employee");
             user.setNickName(nickName);
             user.setAccess(false);
             user.setSendReport(false);
-            user.setDateLastReport(null);
+            user.setDateLastReport("0");
             user.setHours(0);
             user.setDateConnecting(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            user.setLocale(message.getFrom().getLanguageCode());
             sheetsService
                     .writeNext(SheetsName.LOGS, "!A", "!A",
                             transformer.transformToData(user));
@@ -67,16 +63,6 @@ public class UserService {
         boolean access = userFromTable.isSendReport();
         logger.info("Access to send reports for user " + userFromTable.getName() + " is " + (access ? "accept" : "denied"));
         return access;
-    }
-
-    private void setBotLanguage(Update update) {
-        String language = update.getMessage().getFrom().getLanguageCode();
-        logger.atInfo().log("user language - " + language);
-        languageBot = switch (language) {
-            case "uk" -> new Ua();
-            default -> new En();
-        };
-        logger.atInfo().log("app language - " + languageBot.getLanguage());
     }
 
 }

@@ -1,35 +1,30 @@
 package com.bot.employeeTimeTracongBot.bot;
 
-import com.bot.employeeTimeTracongBot.lang.Language;
 import com.bot.employeeTimeTracongBot.model.Building;
 import com.bot.employeeTimeTracongBot.service.SheetsService;
-import com.bot.employeeTimeTracongBot.utils.KeyboardUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.ResourceBundle;
 
 public class Response {
-    private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
+    private static final Logger logger = LoggerFactory.getLogger(Response.class);
+    private static final Locale defaultLocale = Locale.ENGLISH; // За замовчуванням використовуємо англійську мову
+    private static final ResourceBundle defaultResourceBundle = ResourceBundle.getBundle("messages", defaultLocale);
+    private static final ResourceBundle ukrainianResourceBundle = ResourceBundle.getBundle("messages", new Locale("uk"));
+    private static final ResourceBundle russianResourceBundle = ResourceBundle.getBundle("messages", new Locale("ru"));
     SheetsService sheetsService = new SheetsService();
-
-    public SendMessage sendMainMenu(String chatId, Language language) {
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setReplyMarkup(KeyboardUtils.getMainMenuKeyboard(language));
-        message.setText(language.chose());
-
-//         Налаштуйте клавіатуру з кнопками
-        return message;
-    }
 
     public SendMessage sendListOfObjects(String message_, long chatId, List<List<InlineKeyboardButton>> rowsInline) {
         SendMessage message = new SendMessage();
@@ -48,11 +43,10 @@ public class Response {
         return message;
     }
 
-    public DeleteMessage deleteLastBotMessage(Update update) {
-        if (update.hasMessage() && update.getMessage().hasViaBot()) {
-            Message botMessage = update.getMessage();
-            Long chatId = botMessage.getChatId();
-            Integer messageId = botMessage.getMessageId();
+    public DeleteMessage deleteLastBotMessage(Message message) {
+        if (message != null && message.getFrom().getIsBot()) {
+            Long chatId = message.getChatId();
+            Integer messageId = message.getMessageId();
 
             DeleteMessage deleteMessage = new DeleteMessage(chatId.toString(), messageId);
 
@@ -87,10 +81,10 @@ public class Response {
         return markup;
     }
 
-    public SendMessage sendRegistrationResponse(String chatId) {
+    public SendMessage sendRegistrationResponse(Update update) {
         SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setText("Ви були успішно зареєстровані!");
+        message.setChatId(String.valueOf(update.getMessage().getChatId()));
+        message.setText(getString("registration_success", getLanguage(update)));
         return message;
     }
 
@@ -106,5 +100,29 @@ public class Response {
             rowsInLine.add(rowLine);
         }
         return rowsInLine;
+    }
+
+    private String getString(String key, Locale locale) {
+        ResourceBundle resourceBundle = defaultResourceBundle;
+        if (locale.equals(new Locale("uk"))) {
+            resourceBundle = ukrainianResourceBundle;
+        } else if (locale.equals(new Locale("ru"))) {
+            resourceBundle = russianResourceBundle;
+        }
+        return resourceBundle.getString(key);
+    }
+
+    private Locale getLanguage(Update update) {
+        if (update.getMessage() != null && update.getMessage().getFrom() != null && update.getMessage().getFrom().getLanguageCode() != null) {
+            String languageCode = update.getMessage().getFrom().getLanguageCode();
+            if ("uk".equals(languageCode)) {
+                return new Locale("uk");
+            } else if ("ru".equals(languageCode)) {
+                return new Locale("ru");
+            }
+        }
+
+        // За замовчуванням використовуємо англійську мову
+        return Locale.ENGLISH;
     }
 }
