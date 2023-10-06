@@ -1,6 +1,6 @@
 # Telegram bot for tracking employes working hours
 
-This project response twice a day every activ employee.
+This bot response twice a day every activ employee.
 
 /start
 
