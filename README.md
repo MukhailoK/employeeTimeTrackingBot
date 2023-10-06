@@ -35,6 +35,7 @@ After confirm, you report sending to google sheet:
 /second
 
 ![Screen shot8](screenshots/img10.png)
+
 Second request give you possibility close you work day and send work hours
 
 ![Screen shot9](screenshots/img11.png)
