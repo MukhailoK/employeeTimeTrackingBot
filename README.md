@@ -7,7 +7,9 @@ This bot response twice a day every activ employee.
 ![Screen shot1](screenshots/img2.png)
 
 if you push button yes, your data will spell to google sheet
+
 ![Screen shot2](screenshots/img3.png)
+
 when owner of table must give access for employee.
 After that bot will send request twice a day.
 
@@ -30,6 +32,7 @@ You can call request by hand with next commands:
 ![Screen shot6](screenshots/img7.png)
 
 After confirm, you report sending to google sheet:
+
 ![Screen shot7](screenshots/img.png)
 
 /second
@@ -37,6 +40,7 @@ After confirm, you report sending to google sheet:
 ![Screen shot8](screenshots/img10.png)
 
 Second request give you possibility close you work day and send work hours
+
 ![Screen shot9](screenshots/img11.png)
 
 ![Screen shot10](screenshots/img14.png)
