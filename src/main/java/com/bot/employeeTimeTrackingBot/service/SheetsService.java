@@ -1,16 +1,14 @@
-package com.bot.employeeTimeTracongBot.service;
+package com.bot.employeeTimeTrackingBot.service;
 
-import com.bot.employeeTimeTracongBot.bot.TimeTrackingBot;
-import com.bot.employeeTimeTracongBot.data.SheetsName;
-import com.bot.employeeTimeTracongBot.google.MySheets;
-import com.bot.employeeTimeTracongBot.model.Building;
-import com.bot.employeeTimeTracongBot.model.User;
-import com.bot.employeeTimeTracongBot.transformer.SheetsTransformer;
+import com.bot.employeeTimeTrackingBot.bot.TimeTrackingBot;
+import com.bot.employeeTimeTrackingBot.data.SheetsName;
+import com.bot.employeeTimeTrackingBot.google.MySheets;
+import com.bot.employeeTimeTrackingBot.model.Building;
+import com.bot.employeeTimeTrackingBot.model.User;
+import com.bot.employeeTimeTrackingBot.transformer.SheetsTransformer;
 import com.google.api.services.sheets.v4.Sheets;
-import com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest;
-import com.google.api.services.sheets.v4.model.BatchUpdateValuesResponse;
-import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
-import com.google.api.services.sheets.v4.model.ValueRange;
+import com.google.api.services.sheets.v4.model.*;
+import keys.Key;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,13 +22,52 @@ import java.util.List;
 public class SheetsService extends MySheets {
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
     SheetsTransformer sheetsTransformer = new SheetsTransformer();
-public void deleteUserFromTableByChatId(long chatId){
+    private static final String spreadsheetId = Key.TABLE_ID;
 
-}
+    public void deleteUserFromTableByChatId(long chatId) {
+        String range = "Користувачі!A2:J"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
+        Sheets sheets = sheetsService();
+        ValueRange response;
+        try {
+            response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        List<List<Object>> values = response.getValues();
+        if (values == null || values.isEmpty()) {
+            logger.info("Values size -> " + 0);
+        } else
+            for (int i = 0; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row.size() >= 5) {
+                    if (Long.parseLong(row.get(5).toString()) == chatId) {
+                        logger.info("Found -> " + chatId);
+                        DeleteDimensionRequest deleteRequest = new DeleteDimensionRequest();
+                        deleteRequest.setRange(new DimensionRange()
+                                .setSheetId(0)
+                                .setDimension("ROWS") // Видаляємо рядок.
+                                .setStartIndex(i + 1) // З індекса 0 (нумерація починається з 0).
+                                .setEndIndex(i + 2)); //
+                        Request request = new Request()
+                                .setDeleteDimension(deleteRequest);
+                        List<Request> requests = new ArrayList<>();
+                        requests.add(request);
+                        BatchUpdateSpreadsheetRequest batchUpdateRequest = new BatchUpdateSpreadsheetRequest().setRequests(requests);
+                        try {
+                            sheetsService().spreadsheets().batchUpdate(spreadsheetId, batchUpdateRequest).execute();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                    }
+                }
+            }
+    }
+
     public User readUserFromTableByChatId(long chatId) {
         String range = "Користувачі!A2:J"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
         Sheets sheets = sheetsService();
-        ValueRange response = null;
+        ValueRange response;
         try {
             response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
         } catch (IOException e) {
@@ -38,16 +75,12 @@ public void deleteUserFromTableByChatId(long chatId){
         }
 
         List<List<Object>> values = response.getValues();
-        logger.info("Values size -> " + values.size());
         if (values == null || values.isEmpty()) {
+            logger.info("values is null");
             return null; // Таблиця пуста або немає даних
         }
-
         for (List<Object> row : values) {
-//         Перевіряємо, чи нікнейм співпадає з введеним нікнеймом
             if (row.size() >= 5) {
-                logger.info("row -> " + row.get(4));
-                logger.info("chatId -> " + chatId);
                 if (Long.parseLong(row.get(5).toString()) == chatId) {
                     logger.info("Found -> " + chatId);
                     return sheetsTransformer.transformToEntity(row);
@@ -58,36 +91,22 @@ public void deleteUserFromTableByChatId(long chatId){
         return null;
     }
 
-    public boolean writeNext(String sheetsName, String colum, String columSearch, List<Object> rowData) {
-        // Initialize the Sheets service
+    public void writeNext(String sheetsName, String colum, String columSearch, List<Object> rowData) {
+        logger.info("Method write netx started");
         Sheets sheets = sheetsService();
-
-        // Create a ValueRange object to hold the data you want to append
-
-        ValueRange body = new ValueRange().setValues(Collections.singletonList(rowData));
-
-        // Define the range where you want to append the data
         String range = sheetsName + colum + (getLastRow(sheetsName + columSearch + columSearch.replace('!', ':')) + 1); // Append to the next empty row
-
-        // Create the AppendValuesRequest
-
         ValueRange request = new ValueRange().setValues(Collections.singletonList(rowData)).setRange(range);
-
-        // Create the BatchUpdateValuesRequest
         BatchUpdateValuesRequest batchUpdateRequest = new BatchUpdateValuesRequest().setValueInputOption("RAW").setData(List.of(request));
-
-        // Execute the request to append the data
         try {
-            BatchUpdateValuesResponse response = sheets.spreadsheets().values().batchUpdate(spreadsheetId, batchUpdateRequest).execute();
+            sheets.spreadsheets().values().batchUpdate(spreadsheetId, batchUpdateRequest).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         logger.info("Data appended successfully.");
-        return true;
     }
 
     private int getLastRow(String sheetName) {
-        // Get the last row with data in the sheet
+        logger.info("method getLastRow is started");
         Sheets sheets = sheetsService();
         ValueRange response;
         try {
@@ -98,59 +117,17 @@ public void deleteUserFromTableByChatId(long chatId){
 
         List<List<Object>> values = response.getValues();
         if (values == null || values.isEmpty()) {
+            logger.info("method getLastRow found any row");
             return 0; // No data in the sheet
         } else {
+            logger.info("method getLastRow found " + values.size() + " row");
             return values.size();
         }
     }
 
-    public int getIndexOfRow(String sheetName, String name) {
-        Sheets sheets = sheetsService();
-        ValueRange response;
-        try {
-            response = sheets.spreadsheets().values().get(spreadsheetId, sheetName).execute();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        List<List<Object>> values = response.getValues();
-        for (int i = 0; i < values.size(); i++) {
-            List<Object> objects = values.get(i);
-            for (Object o : objects) {
-                if (o.toString().equals(name)) {
-                    return i + 1;
-                }
-            }
-        }
-        return -1;
-    }
-
-    public boolean writeToTable(String sheetName, User user) {
-        Sheets sheets = sheetsService();
-        try {
-            // Перевірка, чи існує таблиця з таким spreadsheetId
-            sheets.spreadsheets().get(spreadsheetId).execute();
-        } catch (IOException e) {
-            throw new RuntimeException("Помилка при отриманні таблиці: " + e.getMessage());
-        }
-
-        ValueRange body = new ValueRange().setValues(Collections.singletonList(sheetsTransformer.transformToData(user)));
-
-        try {
-            // Оновлення даних в таблиці
-            UpdateValuesResponse result = sheets.spreadsheets()
-                    .values()
-                    .update(spreadsheetId,
-                            sheetName + "!A" + getIndexOfRow(sheetName, user.getName()) + ":I",
-                            body).setValueInputOption("RAW")
-                    .execute();
-
-            return result.isEmpty();
-        } catch (IOException e) {
-            throw new RuntimeException("Помилка при оновленні таблиці: " + e.getMessage());
-        }
-    }
-
     public List<Building> getAllActualBuilding() {
+        logger.info("method getAllActualBuilding started");
+
         String range = SheetsName.BUILDINGS + "!A2:B"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
         Sheets sheets = sheetsService();
         ValueRange response;
@@ -161,21 +138,23 @@ public void deleteUserFromTableByChatId(long chatId){
         }
 
         List<List<Object>> values = response.getValues();
-        logger.info("Values size -> " + values.size());
         if (values == null || values.isEmpty()) {
+            logger.info("method getAllActualBuilding found " + 0 + " actual buildings");
+
             return null; // Таблиця пуста або немає даних
         }
         List<Building> buildingList = new ArrayList<>();
         for (List<Object> row : values) {
             if (Boolean.parseBoolean(row.get(1).toString())) {
                 buildingList.add(new Building((String) row.get(0), Boolean.parseBoolean(row.get(1).toString())));
-                logger.info("Add -> " + row.get(0));
             }
         }
+        logger.info("method getAllActualBuilding found " + buildingList.size() + " actual buildings");
         return buildingList;
     }
 
     public List<User> getAllActualUsers() {
+        logger.info("method getAllActualUsers returned is started");
         String range = SheetsName.USERS + "!A2:J";
         Sheets sheets = sheetsService();
         ValueRange response;
@@ -186,7 +165,6 @@ public void deleteUserFromTableByChatId(long chatId){
         }
 
         List<List<Object>> values = response.getValues();
-        logger.info("Values size -> " + values.size());
         if (values == null || values.isEmpty()) {
             return null; // Таблиця пуста або немає даних
         }
@@ -198,6 +176,7 @@ public void deleteUserFromTableByChatId(long chatId){
                 System.out.println(row.get(9));
             }
         }
+        logger.info("method getAllActualUsers returned userList");
         return usersList;
     }
 
@@ -214,19 +193,21 @@ public void deleteUserFromTableByChatId(long chatId){
         List<List<Object>> values = response.getValues();
         logger.info("Values size -> " + values.size());
         if (values.isEmpty()) {
+            logger.info("method isPresent returned empty values");
             return false; // Таблиця пуста або немає даних
         }
 
         for (List<Object> row : values) {
             if (row.size() >= 6 && Long.parseLong(row.get(5).toString()) == chatId) {
-                logger.info("Present chat Id -> " + row.get(5));
+                logger.info("method isPresent returned value");
                 return true;
             }
         }
+        logger.info("method isPresent returned false");
         return false;
     }
 
-    public int getTotalMouthHoursForUser(long chatId) {
+    public double getTotalMouthHoursForUser(long chatId) {
         String range = SheetsName.USERS + "!A2:J";
         Sheets sheets = sheetsService();
         ValueRange response;
@@ -237,17 +218,20 @@ public void deleteUserFromTableByChatId(long chatId){
         }
 
         List<List<Object>> values = response.getValues();
-        logger.info("Values size -> " + values.size());
         if (values.isEmpty()) {
+            logger.info("method getTotalMouthHoursForUser returned empty values");
             return 0; // Таблиця пуста або немає даних
         }
 
         for (List<Object> row : values) {
             if (row.size() >= 5 && Long.parseLong(row.get(5).toString()) == chatId) {
-                logger.info("total Hours -> " + row.get(9));
-                return Integer.parseInt(row.get(9).toString());
+                logger.info("method getTotalMouthHoursForUser returned value -> total hours: " + row.get(9));
+                String numberString = String.valueOf(row.get(9));
+                numberString = numberString.replace(',', '.');
+                return Double.parseDouble(numberString);
             }
         }
+        logger.info("method getTotalMouthHoursForUser returned empty values");
         return 0;
     }
 
@@ -268,10 +252,8 @@ public void deleteUserFromTableByChatId(long chatId){
                     String range1 = "!A" + (2 + i); // Оновити комірку "Дата і час прийшов" у відповідному рядку
                     String updateRange = SheetsName.REPORTS + range1;
                     row.set(2, Long.parseLong(String.valueOf(row.get(2))));
-                    row.set(1, String.valueOf(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"))));
+                    row.set(1, LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")));
                     row.add(5, hours);
-
-                    // Оновити лише конкретний рядок у таблиці
                     ValueRange updateBody = new ValueRange().setValues(Collections.singletonList(row));
                     UpdateValuesResponse result;
                     try {
