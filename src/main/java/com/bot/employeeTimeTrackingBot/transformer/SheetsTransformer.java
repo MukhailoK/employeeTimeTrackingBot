@@ -1,10 +1,12 @@
 package com.bot.employeeTimeTrackingBot.transformer;
 
 import com.bot.employeeTimeTrackingBot.model.User;
+import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-
+@Component
 public class SheetsTransformer {
     public List<Object> transformToData(User user) {
         return Arrays.asList(user.isAccess(),
@@ -18,6 +20,10 @@ public class SheetsTransformer {
                 user.getDateLastReport(),
                 user.getHours()
         );
+    }
+
+    public List<Object> transformToLog(User user) {
+        return Collections.singletonList(user.toString());
     }
 
     public User transformToEntity(List<Object> cells) {

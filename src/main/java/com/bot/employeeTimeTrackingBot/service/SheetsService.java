@@ -1,31 +1,41 @@
 package com.bot.employeeTimeTrackingBot.service;
 
+import com.bot.employeeTimeTrackingBot.transformer.SheetsTransformer;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.bot.employeeTimeTrackingBot.bot.TimeTrackingBot;
 import com.bot.employeeTimeTrackingBot.data.SheetsName;
 import com.bot.employeeTimeTrackingBot.google.MySheets;
 import com.bot.employeeTimeTrackingBot.model.Building;
 import com.bot.employeeTimeTrackingBot.model.User;
-import com.bot.employeeTimeTrackingBot.transformer.SheetsTransformer;
-import com.google.api.services.sheets.v4.Sheets;
+import org.springframework.stereotype.Repository;
 import com.google.api.services.sheets.v4.model.*;
-import keys.Key;
-import org.slf4j.Logger;
+import com.google.api.services.sheets.v4.Sheets;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+import keys.Key;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.Collections;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
+
+@Repository
 public class SheetsService extends MySheets {
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
-    SheetsTransformer sheetsTransformer = new SheetsTransformer();
+    private final SheetsTransformer sheetsTransformer;
     private static final String spreadsheetId = Key.TABLE_ID;
 
+    @Autowired
+    public SheetsService(SheetsTransformer sheetsTransformer) {
+        this.sheetsTransformer = sheetsTransformer;
+    }
+
+
     public void deleteUserFromTableByChatId(long chatId) {
-        String range = "Користувачі!A2:J"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
+        String range = "Користувачі!A2:J";
         Sheets sheets = sheetsService();
         ValueRange response;
         try {
@@ -65,7 +75,7 @@ public class SheetsService extends MySheets {
     }
 
     public User readUserFromTableByChatId(long chatId) {
-        String range = "Користувачі!A2:J"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
+        String range = "Користувачі!A2:J";
         Sheets sheets = sheetsService();
         ValueRange response;
         try {
@@ -91,10 +101,11 @@ public class SheetsService extends MySheets {
         return null;
     }
 
+
     public void writeNext(String sheetsName, String colum, String columSearch, List<Object> rowData) {
         logger.info("Method write netx started");
         Sheets sheets = sheetsService();
-        String range = sheetsName + colum + (getLastRow(sheetsName + columSearch + columSearch.replace('!', ':')) + 1); // Append to the next empty row
+        String range = sheetsName + colum + (getLastRow(sheetsName + columSearch + columSearch.replace('!', ':')) + 1);
         ValueRange request = new ValueRange().setValues(Collections.singletonList(rowData)).setRange(range);
         BatchUpdateValuesRequest batchUpdateRequest = new BatchUpdateValuesRequest().setValueInputOption("RAW").setData(List.of(request));
         try {
@@ -128,7 +139,7 @@ public class SheetsService extends MySheets {
     public List<Building> getAllActualBuilding() {
         logger.info("method getAllActualBuilding started");
 
-        String range = SheetsName.BUILDINGS + "!A2:B"; // Замініть "YourSheetName" на назву вашого аркуша та відповідні стовпці
+        String range = SheetsName.BUILDINGS + "!A2:B";
         Sheets sheets = sheetsService();
         ValueRange response;
         try {
@@ -265,7 +276,8 @@ public class SheetsService extends MySheets {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-
+                    writeNext(SheetsName.LOGS, "!A", "!A",
+                            new ArrayList<>(Collections.singleton(row.toString())));
                     logger.info("Report update is " + (result.isEmpty() ? "failed" : "successful"));
                     return !result.isEmpty();
                 }

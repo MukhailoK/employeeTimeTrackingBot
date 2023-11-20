@@ -1,18 +1,26 @@
 package com.bot.employeeTimeTrackingBot.bot;
 
-import com.bot.employeeTimeTrackingBot.model.Building;
-import com.bot.employeeTimeTrackingBot.service.SheetsService;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.bot.employeeTimeTrackingBot.service.SheetsService;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import com.bot.employeeTimeTrackingBot.model.Building;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+@Component
 public class Response {
-    SheetsService sheetsService = new SheetsService();
+    private final SheetsService sheetsService;
+
+    @Autowired
+    public Response(SheetsService sheetsService) {
+        this.sheetsService = sheetsService;
+    }
 
     public SendMessage sendListOfObjects(String message_, long chatId, List<List<InlineKeyboardButton>> rowsInline) {
         SendMessage message = new SendMessage();
@@ -91,14 +99,14 @@ public class Response {
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
         List<InlineKeyboardButton> firstRow = new ArrayList<>();
         InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText(getString("back", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode()))));
-        button1.setCallbackData("back");
+        button1.setText(getString("accept", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode()))));
+        button1.setCallbackData("accept");
         firstRow.add(button1);
         rowsInLine.add(firstRow);
 
         InlineKeyboardButton button2 = new InlineKeyboardButton();
-        button2.setText(getString("accept", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode()))));
-        button2.setCallbackData("accept");
+        button2.setText(getString("back", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode()))));
+        button2.setCallbackData("back");
         List<InlineKeyboardButton> secondRow = new ArrayList<>();
         secondRow.add(button2);
         rowsInLine.add(secondRow);
