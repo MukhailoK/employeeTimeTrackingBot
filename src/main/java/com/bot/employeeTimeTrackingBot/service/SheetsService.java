@@ -1,45 +1,48 @@
 package com.bot.employeeTimeTrackingBot.service;
 
-import com.bot.employeeTimeTrackingBot.transformer.SheetsTransformer;
-import org.springframework.beans.factory.annotation.Autowired;
 import com.bot.employeeTimeTrackingBot.bot.TimeTrackingBot;
 import com.bot.employeeTimeTrackingBot.data.SheetsName;
-import com.bot.employeeTimeTrackingBot.google.MySheets;
 import com.bot.employeeTimeTrackingBot.model.Building;
 import com.bot.employeeTimeTrackingBot.model.User;
-import org.springframework.stereotype.Repository;
-import com.google.api.services.sheets.v4.model.*;
+import com.bot.employeeTimeTrackingBot.transformer.SheetsMapper;
 import com.google.api.services.sheets.v4.Sheets;
-import org.slf4j.LoggerFactory;
+import com.google.api.services.sheets.v4.model.*;
 import org.slf4j.Logger;
-import keys.Key;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
-import java.time.format.DateTimeFormatter;
-import java.time.LocalDateTime;
-import java.util.Collections;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import static com.bot.employeeTimeTrackingBot.data.SheetsName.USERS_RANGE;
 
-@Repository
-public class SheetsService extends MySheets {
+
+@Service
+public class SheetsService {
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
-    private final SheetsTransformer sheetsTransformer;
-    private static final String spreadsheetId = Key.TABLE_ID;
+    private final SheetsMapper sheetsMapper;
+    private final Sheets sheets;
+
+    @Value("${google.api.table.id}")
+    private String tableId;
+
 
     @Autowired
-    public SheetsService(SheetsTransformer sheetsTransformer) {
-        this.sheetsTransformer = sheetsTransformer;
+    public SheetsService(SheetsMapper sheetsMapper, Sheets sheets) {
+        this.sheetsMapper = sheetsMapper;
+        this.sheets = sheets;
     }
 
-
     public void deleteUserFromTableByChatId(long chatId) {
-        String range = "Користувачі!A2:J";
-        Sheets sheets = sheetsService();
         ValueRange response;
         try {
-            response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
+            response = sheets.spreadsheets().values().get(tableId, USERS_RANGE).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -64,7 +67,7 @@ public class SheetsService extends MySheets {
                         requests.add(request);
                         BatchUpdateSpreadsheetRequest batchUpdateRequest = new BatchUpdateSpreadsheetRequest().setRequests(requests);
                         try {
-                            sheetsService().spreadsheets().batchUpdate(spreadsheetId, batchUpdateRequest).execute();
+                            sheets.spreadsheets().batchUpdate(tableId, batchUpdateRequest).execute();
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
@@ -75,11 +78,9 @@ public class SheetsService extends MySheets {
     }
 
     public User readUserFromTableByChatId(long chatId) {
-        String range = "Користувачі!A2:J";
-        Sheets sheets = sheetsService();
         ValueRange response;
         try {
-            response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
+            response = sheets.spreadsheets().values().get(tableId, USERS_RANGE).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -93,7 +94,7 @@ public class SheetsService extends MySheets {
             if (row.size() >= 5) {
                 if (Long.parseLong(row.get(5).toString()) == chatId) {
                     logger.info("Found -> " + chatId);
-                    return sheetsTransformer.transformToEntity(row);
+                    return sheetsMapper.transformToEntity(row);
                 }
             }
         }
@@ -104,12 +105,11 @@ public class SheetsService extends MySheets {
 
     public void writeNext(String sheetsName, String colum, String columSearch, List<Object> rowData) {
         logger.info("Method write netx started");
-        Sheets sheets = sheetsService();
         String range = sheetsName + colum + (getLastRow(sheetsName + columSearch + columSearch.replace('!', ':')) + 1);
         ValueRange request = new ValueRange().setValues(Collections.singletonList(rowData)).setRange(range);
         BatchUpdateValuesRequest batchUpdateRequest = new BatchUpdateValuesRequest().setValueInputOption("RAW").setData(List.of(request));
         try {
-            sheets.spreadsheets().values().batchUpdate(spreadsheetId, batchUpdateRequest).execute();
+            sheets.spreadsheets().values().batchUpdate(tableId, batchUpdateRequest).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -118,10 +118,9 @@ public class SheetsService extends MySheets {
 
     private int getLastRow(String sheetName) {
         logger.info("method getLastRow is started");
-        Sheets sheets = sheetsService();
         ValueRange response;
         try {
-            response = sheets.spreadsheets().values().get(spreadsheetId, sheetName).execute();
+            response = sheets.spreadsheets().values().get(tableId, sheetName).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -140,10 +139,9 @@ public class SheetsService extends MySheets {
         logger.info("method getAllActualBuilding started");
 
         String range = SheetsName.BUILDINGS + "!A2:B";
-        Sheets sheets = sheetsService();
         ValueRange response;
         try {
-            response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
+            response = sheets.spreadsheets().values().get(tableId, range).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -167,10 +165,9 @@ public class SheetsService extends MySheets {
     public List<User> getAllActualUsers() {
         logger.info("method getAllActualUsers returned is started");
         String range = SheetsName.USERS + "!A2:J";
-        Sheets sheets = sheetsService();
         ValueRange response;
         try {
-            response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
+            response = sheets.spreadsheets().values().get(tableId, range).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -182,7 +179,7 @@ public class SheetsService extends MySheets {
         List<User> usersList = new ArrayList<>();
         for (List<Object> row : values) {
             if (row.size() >= 2 && Boolean.parseBoolean(row.get(1).toString())) {
-                usersList.add(sheetsTransformer.transformToEntity(row));
+                usersList.add(sheetsMapper.transformToEntity(row));
                 logger.info("Add -> " + row.get(2));
                 System.out.println(row.get(9));
             }
@@ -193,10 +190,9 @@ public class SheetsService extends MySheets {
 
     public boolean isPresent(long chatId) {
         String range = SheetsName.USERS + "!A2:J";
-        Sheets sheets = sheetsService();
         ValueRange response;
         try {
-            response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
+            response = sheets.spreadsheets().values().get(tableId, range).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -220,10 +216,9 @@ public class SheetsService extends MySheets {
 
     public double getTotalMouthHoursForUser(long chatId) {
         String range = SheetsName.USERS + "!A2:J";
-        Sheets sheets = sheetsService();
         ValueRange response;
         try {
-            response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
+            response = sheets.spreadsheets().values().get(tableId, range).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -248,10 +243,9 @@ public class SheetsService extends MySheets {
 
     public boolean updateReport(long chatId, double hours) {
         String range = SheetsName.REPORTS + "!A2:I";
-        Sheets sheets = sheetsService();
         ValueRange response;
         try {
-            response = sheets.spreadsheets().values().get(spreadsheetId, range).execute();
+            response = sheets.spreadsheets().values().get(tableId, range).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -270,7 +264,7 @@ public class SheetsService extends MySheets {
                     try {
                         result = sheets.spreadsheets()
                                 .values()
-                                .update(spreadsheetId, updateRange, updateBody)
+                                .update(tableId, updateRange, updateBody)
                                 .setValueInputOption("RAW")
                                 .execute();
                     } catch (IOException e) {
@@ -286,4 +280,5 @@ public class SheetsService extends MySheets {
         logger.info("Report update failed");
         return false;
     }
+
 }

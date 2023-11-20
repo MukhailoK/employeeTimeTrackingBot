@@ -1,24 +1,26 @@
 package com.bot.employeeTimeTrackingBot.bot;
 
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.bot.employeeTimeTrackingBot.model.Building;
 import com.bot.employeeTimeTrackingBot.service.SheetsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import com.bot.employeeTimeTrackingBot.model.Building;
-import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.util.*;
 
+import static com.bot.employeeTimeTrackingBot.bot.TimeTrackingBot.determineUserLocale;
+
 @Component
-public class Response {
+public class BotResponseMapper {
     private final SheetsService sheetsService;
 
     @Autowired
-    public Response(SheetsService sheetsService) {
+    public BotResponseMapper(SheetsService sheetsService) {
         this.sheetsService = sheetsService;
     }
 
@@ -123,14 +125,4 @@ public class Response {
         }
     }
 
-    private Locale determineUserLocale(String locale) {
-        return switch (locale) {
-            case "uk" -> new Locale("uk");
-            case "ru" -> new Locale("ru");
-            case "de" -> new Locale("de");
-            case "pl" -> new Locale("pl");
-            case "ro" -> new Locale("ro");
-            default -> new Locale("en");
-        };
-    }
 }

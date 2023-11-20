@@ -1,26 +1,26 @@
 package com.bot.employeeTimeTrackingBot.service;
 
-import com.bot.employeeTimeTrackingBot.transformer.SheetsTransformer;
-import org.springframework.beans.factory.annotation.Autowired;
 import com.bot.employeeTimeTrackingBot.bot.TimeTrackingBot;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import com.bot.employeeTimeTrackingBot.data.SheetsName;
 import com.bot.employeeTimeTrackingBot.model.User;
-import org.springframework.stereotype.Service;
-import org.slf4j.LoggerFactory;
+import com.bot.employeeTimeTrackingBot.transformer.SheetsMapper;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.objects.Message;
 
-import java.time.format.DateTimeFormatter;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class UserService {
-    private final SheetsTransformer transformer;
-    private final SheetsService sheetsService;
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
+    private final SheetsMapper transformer;
+    private final SheetsService sheetsService;
 
     @Autowired
-    public UserService(SheetsTransformer transformer, SheetsService sheetsService) {
+    public UserService(SheetsMapper transformer, SheetsService sheetsService) {
         this.transformer = transformer;
         this.sheetsService = sheetsService;
     }

@@ -9,6 +9,6 @@ import lombok.*;
 @ToString
 public class Building {
     private String address;
-    private Boolean isActiv;
+    private Boolean isActive;
 
 }

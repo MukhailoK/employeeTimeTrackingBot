@@ -6,8 +6,10 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
 @Component
-public class SheetsTransformer {
+public class SheetsMapper {
+
     public List<Object> transformToData(User user) {
         return Arrays.asList(user.isAccess(),
                 user.isSendReport(),

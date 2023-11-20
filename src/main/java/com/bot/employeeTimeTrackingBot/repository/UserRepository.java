@@ -14,5 +14,4 @@ public interface UserRepository {
     boolean deleteUserByChatId(long chatId);
 
 
-
 }
