@@ -1,8 +1,9 @@
 package com.bot.employeeTimeTrackingBot.bot;
 
-import com.bot.employeeTimeTrackingBot.data.SheetsName;
 import com.bot.employeeTimeTrackingBot.model.Building;
 import com.bot.employeeTimeTrackingBot.model.User;
+import com.bot.employeeTimeTrackingBot.service.BuildingService;
+import com.bot.employeeTimeTrackingBot.service.ReportService;
 import com.bot.employeeTimeTrackingBot.service.SheetsService;
 import com.bot.employeeTimeTrackingBot.service.UserService;
 import org.slf4j.Logger;
@@ -19,16 +20,14 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
 public class TimeTrackingBot extends TelegramLongPollingBot {
     private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
-    private final SheetsService sheetsService;
     private final UserService userService;
+    private final ReportService reportService;
+    private final BuildingService buildingService;
     private final BotResponseMapper botResponseMapper;
     Building choseBuilding = null;
     private Message message = null;
@@ -40,11 +39,13 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
     private String name;
 
     @Autowired
-    public TimeTrackingBot(SheetsService sheetsService,
-                           UserService userService,
+    public TimeTrackingBot(UserService userService,
+                           ReportService reportService,
+                           BuildingService buildingService,
                            BotResponseMapper botResponseMapper) {
-        this.sheetsService = sheetsService;
         this.userService = userService;
+        this.reportService = reportService;
+        this.buildingService = buildingService;
         this.botResponseMapper = botResponseMapper;
     }
 
@@ -115,7 +116,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         User userFromTable;
         if (update.hasCallbackQuery() && "second".equals(update.getCallbackQuery().getData())) {
             executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
-            userFromTable = sheetsService
+            userFromTable = userService
                     .readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
             executeMessage(botResponseMapper
                     .sendMessage(getString("work_hours_prompt", userFromTable.getLocale())
@@ -124,34 +125,34 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         try {
 
             if (update.hasMessage() && (Double.parseDouble(update.getMessage().getText()) > 0)) {
-                userFromTable = sheetsService
+                userFromTable = userService
                         .readUserFromTableByChatId(update.getMessage().getChatId());
 //                if (userFromTable.isAccess()
 //                       ) {
 //                     && LocalTime.now().isBefore(LocalTime.of(23, 59, 59))
 //                            && LocalTime.now().isAfter(LocalTime.of(18, 0))
-                    boolean isSend = sheetsService
-                            .updateReport(userFromTable.getChatId(),
-                                    Double.parseDouble(update.getMessage().getText()));
-                    if (isSend) {
-                        sheetsService.changeFlag(update.getMessage().getChatId());
-                        executeMessage(botResponseMapper
-                                .sendMessage(getString("report_sent",
-                                                userFromTable.getLocale()) +
-                                                sheetsService.getTotalMouthHoursForUser(update.getMessage().getChatId()),
-                                        userFromTable.getChatId()));
-                    } else {
-                        executeMessage(botResponseMapper
-                                .sendMessage(getString("work_hours_prompt", userFromTable.getLocale())
-                                        , userFromTable.getChatId()));
-                    }
+                boolean isSend = reportService
+                        .updateReport(userFromTable.getChatId(),
+                                Double.parseDouble(update.getMessage().getText()));
+                if (isSend) {
+                    userService.changeFlag(update.getMessage().getChatId());
+                    executeMessage(botResponseMapper
+                            .sendMessage(getString("report_sent",
+                                            userFromTable.getLocale()) +
+                                            userService.getTotalMouthHoursForUser(update.getMessage().getChatId()),
+                                    userFromTable.getChatId()));
+                } else {
+                    executeMessage(botResponseMapper
+                            .sendMessage(getString("work_hours_prompt", userFromTable.getLocale())
+                                    , userFromTable.getChatId()));
                 }
+            }
         } catch (NumberFormatException e) {
             executeMessage(botResponseMapper.sendMessage("Wrong operation", update.getMessage().getChatId()));
             logger.error("number format exception");
         }
         if (update.hasCallbackQuery() && "ignor".equals(update.getCallbackQuery().getData())) {
-            userFromTable = sheetsService
+            userFromTable = userService
                     .readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
             message = update.getCallbackQuery().getMessage();
             executeMessage(botResponseMapper
@@ -164,10 +165,10 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
 
     public void morningReportsCatcher(Update update) {
         User userFromTable;
-        List<Building> buildings = sheetsService.getAllActualBuilding();
+        List<Building> buildings = buildingService.getAllActualBuilding();
 
         if (update.hasCallbackQuery() && "first".equals(update.getCallbackQuery().getData())) {
-            userFromTable = sheetsService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
+            userFromTable = userService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
             String locale = userFromTable.getLocale();
             List<List<InlineKeyboardButton>> rowsInLine = botResponseMapper.getRowsInLineWithBuildings(buildings);
             executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
@@ -177,7 +178,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         for (Building building : buildings) {
             if (update.hasCallbackQuery() && building.getAddress().equals(update.getCallbackQuery().getData())) {
                 choseBuilding = building;
-                userFromTable = sheetsService
+                userFromTable = userService
                         .readUserFromTableByChatId(update.getCallbackQuery()
                                 .getMessage()
                                 .getChatId());
@@ -190,16 +191,16 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             }
         }
         if (update.hasCallbackQuery() && "accept".equals(update.getCallbackQuery().getData()) && choseBuilding != null) {
-            userFromTable = sheetsService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
+            userFromTable = userService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
             if (!userFromTable.isAccess()) {
-                sheetsService.changeFlag(update.getCallbackQuery().getMessage().getChatId());
+                userService.changeFlag(update.getCallbackQuery().getMessage().getChatId());
                 sendFirstReportToTable(userFromTable, choseBuilding, update);
             }
         }
         if (update.hasCallbackQuery() && "back".equals(update.getCallbackQuery().getData())) {
             executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             String locale = update.getCallbackQuery().getFrom().getLanguageCode();
-            userFromTable = sheetsService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
+            userFromTable = userService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
 
             List<List<InlineKeyboardButton>> rowsInLine = botResponseMapper.getRowsInLineWithBuildings(buildings);
 
@@ -214,7 +215,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId(); // Отримати початковий chatId
             message = update.getMessage();
-            sheetsService.readUserFromTableByChatId(chatId);
+            userService.readUserFromTableByChatId(chatId);
             User user = new User();
             user.setName(update.getMessage().getFrom().getFirstName() +
                     " " + update.getMessage().getFrom().getLastName());
@@ -241,7 +242,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             if ("yes".equals(callbackData)) {
                 logger.info("button 'Yes' pushed");
                 long chatId = update.getCallbackQuery().getMessage().getChatId(); // Отримати початковий chatId
-                if (!sheetsService.isPresent(chatId)) {
+                if (!userService.isPresent(chatId)) {
                     User user = userService.registration(message);
                     if (user != null) {
                         executeMessage(botResponseMapper
@@ -260,14 +261,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
     }
 
     private void sendFirstReportToTable(User userFromTable, Building building, Update update) {
-        sheetsService.writeNext(SheetsName.REPORTS, "!A", "!A", new ArrayList<>(Arrays
-                .asList(LocalDateTime.now()
-                                .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")),
-                        "",
-                        Long.parseLong(String.valueOf(userFromTable.getChatId())),
-                        userFromTable.getName(),
-                        building.getAddress(),
-                        "")));
+        reportService.createFirstReport(userFromTable, building);
         executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
         executeMessage(botResponseMapper.sendMessage(getString("have_a_good_workday", userFromTable.getLocale()), userFromTable.getChatId()));
 
@@ -277,7 +271,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
     public void sendMorningDailyMessageToAllUsers() {
         logger.atInfo().log("start sending morning notification");
         logger.atInfo().log("Get all actual users from google sheet");
-        List<User> userList = sheetsService.getAllActualUsers();
+        List<User> userList = userService.getAllActualUsers();
 
         for (User user : userList) {
             List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
@@ -289,7 +283,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
 
             String morningGreeting = getString("good_morning",
                     user.getName(),
-                    Double.parseDouble(String.valueOf(sheetsService
+                    Double.parseDouble(String.valueOf(userService
                             .getTotalMouthHoursForUser(user.getChatId())))
                     , user.getLocale());
             executeMessage(botResponseMapper
@@ -305,7 +299,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
     public void sendDailyMessageToAllUsers() {
         logger.atInfo().log("start sending notification");
         logger.atInfo().log("Get all actual users from google sheet");
-        List<User> userList = sheetsService.getAllActualUsers().stream().filter(User::isAccess).toList();
+        List<User> userList = userService.getAllActualUsers().stream().filter(User::isAccess).toList();
 
         for (User user : userList) {
             List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
@@ -315,7 +309,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             button1.setCallbackData("second");
             buildIgnoreButton(user, rowsInLine, button1);
             String eveningGreeting = getString("good_evening", user.getName(),
-                    Double.parseDouble(String.valueOf(sheetsService.getTotalMouthHoursForUser(user.getChatId()))),
+                    Double.parseDouble(String.valueOf(userService.getTotalMouthHoursForUser(user.getChatId()))),
                     user.getLocale());
 
             executeMessage(botResponseMapper

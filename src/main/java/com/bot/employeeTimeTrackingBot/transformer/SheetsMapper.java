@@ -7,10 +7,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-@Component
 public class SheetsMapper {
 
-    public List<Object> transformToData(User user) {
+    public static List<Object> transformToData(User user) {
         return Arrays.asList(user.isAccess(),
                 user.isSendReport(),
                 user.getLocale(),
@@ -22,11 +21,11 @@ public class SheetsMapper {
         );
     }
 
-    public List<Object> transformToLog(User user) {
+    public static List<Object> transformToLog(User user) {
         return Collections.singletonList(user.toString());
     }
 
-    public User transformToEntity(List<Object> cells) {
+    public static User transformToEntity(List<Object> cells) {
         User user = new User();
         user.setAccess(Boolean.parseBoolean(cells.get(0).toString()));
         user.setSendReport(Boolean.parseBoolean(cells.get(1).toString()));
