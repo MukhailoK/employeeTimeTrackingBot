@@ -5,6 +5,7 @@ import com.bot.employeeTimeTrackingBot.data.SheetsName;
 import com.bot.employeeTimeTrackingBot.model.Building;
 import com.bot.employeeTimeTrackingBot.model.User;
 import com.bot.employeeTimeTrackingBot.transformer.SheetsMapper;
+import com.google.api.services.sheets.v4.model.CellData;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.*;
 import org.slf4j.Logger;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static com.bot.employeeTimeTrackingBot.data.SheetsName.USERS;
 import static com.bot.employeeTimeTrackingBot.data.SheetsName.USERS_RANGE;
 
 
@@ -164,7 +166,7 @@ public class SheetsService {
 
     public List<User> getAllActualUsers() {
         logger.info("method getAllActualUsers returned is started");
-        String range = SheetsName.USERS + "!A2:J";
+        String range = USERS + "!A2:J";
         ValueRange response;
         try {
             response = sheets.spreadsheets().values().get(tableId, range).execute();
@@ -189,7 +191,7 @@ public class SheetsService {
     }
 
     public boolean isPresent(long chatId) {
-        String range = SheetsName.USERS + "!A2:J";
+        String range = USERS + "!A2:J";
         ValueRange response;
         try {
             response = sheets.spreadsheets().values().get(tableId, range).execute();
@@ -215,7 +217,7 @@ public class SheetsService {
     }
 
     public double getTotalMouthHoursForUser(long chatId) {
-        String range = SheetsName.USERS + "!A2:J";
+        String range = USERS + "!A2:J";
         ValueRange response;
         try {
             response = sheets.spreadsheets().values().get(tableId, range).execute();
@@ -281,4 +283,46 @@ public class SheetsService {
         return false;
     }
 
+    public boolean changeFlag(long chatId) {
+        String range = USERS + "!A2:J";
+        ValueRange response;
+        try {
+            response = sheets.spreadsheets().values().get(tableId, range).execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        List<List<Object>> values = response.getValues();
+        if (values.isEmpty()) {
+            logger.info("method changeFlag() returned empty values");
+            return false; // Таблиця пуста або немає даних
+        }
+
+        for (int i = 0; i < values.size(); i++) {
+            List<Object> row = values.get(i);
+            if (row.size() >= 5 && Long.parseLong(row.get(5).toString()) == chatId) {
+                User user = sheetsMapper.transformToEntity(row);
+                user.setAccess(!user.isAccess());
+                row = sheetsMapper.transformToData(user);
+                logger.info("method changeFlag() changed Flag value ->" + row.get(0));
+                range = "!A" + (2 + i); // Оновити комірку "Дата і час прийшов" у відповідному рядку
+                String updateRange = USERS + range;
+                ValueRange updateBody = new ValueRange().setValues(Collections.singletonList(row));
+                UpdateValuesResponse result;
+                try {
+                    result = sheets.spreadsheets()
+                            .values()
+                            .update(tableId, updateRange, updateBody)
+                            .setValueInputOption("RAW")
+                            .execute();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                writeNext(SheetsName.LOGS, "!A", "!A",
+                        new ArrayList<>(Collections.singleton(row.toString())));
+                logger.info("Report update is " + (result.isEmpty() ? "failed" : "successful"));
+                return !result.isEmpty();
+            }
+        }
+        return false;
+    }
 }

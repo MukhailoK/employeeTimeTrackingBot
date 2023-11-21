@@ -83,9 +83,8 @@ public class BotResponseMapper {
         return message;
     }
 
-    public List<List<InlineKeyboardButton>> getRowsInLineWithBuildings() {
+    public List<List<InlineKeyboardButton>> getRowsInLineWithBuildings( List<Building> buildings ) {
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
-        List<Building> buildings = sheetsService.getAllActualBuilding();
         for (Building building : buildings) {
             List<InlineKeyboardButton> rowLine = new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton();

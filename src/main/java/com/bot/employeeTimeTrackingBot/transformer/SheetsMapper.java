@@ -18,9 +18,7 @@ public class SheetsMapper {
                 user.getDateConnecting(),
                 user.getChatId(),
                 user.getNickName(),
-                user.getFullName(),
-                user.getDateLastReport(),
-                user.getHours()
+                user.getFullName()
         );
     }
 
