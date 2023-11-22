@@ -22,6 +22,7 @@ public class GoogleSheetApiConfig {
 
     @Value("${google.api.credentials.path}")
     private String credentialsPath;
+
     @Bean
     public Sheets sheets() {
         JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();

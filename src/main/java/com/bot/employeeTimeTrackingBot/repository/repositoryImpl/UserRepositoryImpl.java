@@ -12,9 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +23,7 @@ import static com.bot.employeeTimeTrackingBot.data.SheetsName.USERS_RANGE;
 public class UserRepositoryImpl implements UserRepository {
     private final Sheets sheets;
     private final SheetsService sheetsService;
+
     @Value("${google.api.table.id}")
     private String tableId;
 
@@ -59,25 +58,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public List<User> getAllWorkingUsers() {
-        String range = USERS + "!A2:J";
-        ValueRange response;
-        try {
-            response = sheets.spreadsheets().values().get(tableId, range).execute();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        List<List<Object>> values = response.getValues();
-        if (values == null || values.isEmpty()) {
-            return null; // Таблиця пуста або немає даних
-        }
-        List<User> usersList = new ArrayList<>();
-        for (List<Object> row : values) {
-            if (row.size() >= 2 && Boolean.parseBoolean(row.get(0).toString())) {
-                usersList.add(SheetsMapper.transformToEntity(row));
-            }
-        }
-        return usersList;
+        return getAllActualUsers().stream().filter(User::isAccess).toList();
     }
 
     @Override
@@ -151,20 +132,7 @@ public class UserRepositoryImpl implements UserRepository {
                 row = SheetsMapper.transformToData(user);
                 range = "!A" + (2 + i); // Оновити комірку "Дата і час прийшов" у відповідному рядку
                 String updateRange = USERS + range;
-                ValueRange updateBody = new ValueRange().setValues(Collections.singletonList(row));
-                UpdateValuesResponse result;
-                try {
-                    result = sheets.spreadsheets()
-                            .values()
-                            .update(tableId, updateRange, updateBody)
-                            .setValueInputOption("RAW")
-                            .execute();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                sheetsService.writeNext(SheetsName.LOGS, "!A", "!A",
-                        new ArrayList<>(Collections.singleton(row.toString())));
-                return !result.isEmpty();
+                return sheetsService.updateInto(row, updateRange, sheets, tableId, sheetsService);
             }
         }
         return false;

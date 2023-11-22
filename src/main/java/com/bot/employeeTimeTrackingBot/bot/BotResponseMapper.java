@@ -1,7 +1,7 @@
 package com.bot.employeeTimeTrackingBot.bot;
 
 import com.bot.employeeTimeTrackingBot.model.Building;
-import com.bot.employeeTimeTrackingBot.service.SheetsService;
+import com.bot.employeeTimeTrackingBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -13,15 +13,14 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 
 import java.util.*;
 
-import static com.bot.employeeTimeTrackingBot.bot.TimeTrackingBot.determineUserLocale;
 
 @Component
 public class BotResponseMapper {
-    private final SheetsService sheetsService;
+    private final UserService userService;
 
     @Autowired
-    public BotResponseMapper(SheetsService sheetsService) {
-        this.sheetsService = sheetsService;
+    public BotResponseMapper(UserService userService) {
+        this.userService = userService;
     }
 
     public SendMessage sendListOfObjects(String message_, long chatId, List<List<InlineKeyboardButton>> rowsInline) {
@@ -78,12 +77,14 @@ public class BotResponseMapper {
 
     public SendMessage sendRegistrationResponse(Update update) {
         SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(update.getMessage().getChatId()));
-        message.setText(getString("registration_success", String.valueOf(determineUserLocale(update.getMessage().getFrom().getLanguageCode()))));
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
+        message.setChatId(String.valueOf(chatId));
+        String locale = userService.readUserFromTableByChatId(chatId).getLocale();
+        message.setText(getString("registration_success", locale));
         return message;
     }
 
-    public List<List<InlineKeyboardButton>> getRowsInLineWithBuildings( List<Building> buildings ) {
+    public List<List<InlineKeyboardButton>> getRowsInLineWithBuildings(List<Building> buildings) {
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
         for (Building building : buildings) {
             List<InlineKeyboardButton> rowLine = new ArrayList<>();
@@ -100,13 +101,16 @@ public class BotResponseMapper {
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
         List<InlineKeyboardButton> firstRow = new ArrayList<>();
         InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText(getString("accept", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode()))));
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
+        String locale = userService.readUserFromTableByChatId(chatId).getLocale();
+
+        button1.setText(getString("accept", locale));
         button1.setCallbackData("accept");
         firstRow.add(button1);
         rowsInLine.add(firstRow);
 
         InlineKeyboardButton button2 = new InlineKeyboardButton();
-        button2.setText(getString("back", String.valueOf(determineUserLocale(update.getCallbackQuery().getFrom().getLanguageCode()))));
+        button2.setText(getString("back", locale));
         button2.setCallbackData("back");
         List<InlineKeyboardButton> secondRow = new ArrayList<>();
         secondRow.add(button2);
@@ -114,7 +118,7 @@ public class BotResponseMapper {
         return rowsInLine;
     }
 
-    private String getString(String key, String locale) {
+    public String getString(String key, String locale) {
         Locale userLocale = determineUserLocale(locale);
         ResourceBundle resourceBundle = ResourceBundle.getBundle("messages", userLocale);
         try {
@@ -122,6 +126,28 @@ public class BotResponseMapper {
         } catch (MissingResourceException e) {
             return "Message not found for key: " + key;
         }
+    }
+
+    public String getString(String key, String name, double hours, String locale) {
+        Locale userLocale = determineUserLocale(locale);
+        ResourceBundle resourceBundle = ResourceBundle.getBundle("messages",
+                userLocale);
+        try {
+            return String.format(resourceBundle.getString(key), name, hours);
+        } catch (MissingResourceException e) {
+            return "Message not found for key: " + key;
+        }
+    }
+
+    public static Locale determineUserLocale(String locale) {
+        return switch (locale) {
+            case "uk" -> new Locale("uk");
+            case "ru" -> new Locale("ru");
+            case "de" -> new Locale("de");
+            case "pl" -> new Locale("pl");
+            case "ro" -> new Locale("ro");
+            default -> new Locale("en");
+        };
     }
 
 }

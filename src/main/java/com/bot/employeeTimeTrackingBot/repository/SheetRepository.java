@@ -1,6 +1,7 @@
 package com.bot.employeeTimeTrackingBot.repository;
 
-import org.springframework.stereotype.Repository;
+import com.bot.employeeTimeTrackingBot.service.SheetsService;
+import com.google.api.services.sheets.v4.Sheets;
 
 import java.util.List;
 
@@ -9,4 +10,5 @@ public interface SheetRepository {
 
     int getLastRow(String sheetName);
 
+    boolean updateInto(List<Object> row, String updateRange, Sheets sheets, String tableId, SheetsService sheetsService);
 }

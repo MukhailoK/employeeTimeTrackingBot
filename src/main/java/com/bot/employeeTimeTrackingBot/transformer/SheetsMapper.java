@@ -1,7 +1,6 @@
 package com.bot.employeeTimeTrackingBot.transformer;
 
 import com.bot.employeeTimeTrackingBot.model.User;
-import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Collections;

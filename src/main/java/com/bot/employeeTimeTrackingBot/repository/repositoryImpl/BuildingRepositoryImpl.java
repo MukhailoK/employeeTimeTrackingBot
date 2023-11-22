@@ -24,11 +24,6 @@ public class BuildingRepositoryImpl implements BuildingRepository {
 
     @Override
     public List<Building> getAllBuildings() {
-        return null;
-    }
-
-    @Override
-    public List<Building> getAllActualBuildings() {
         String range = SheetsName.BUILDINGS + "!A2:B";
         ValueRange response;
         try {
@@ -36,18 +31,20 @@ public class BuildingRepositoryImpl implements BuildingRepository {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
         List<List<Object>> values = response.getValues();
         if (values == null || values.isEmpty()) {
-
-            throw new NullPointerException("Table is empty or no matches"); // Таблиця пуста або немає даних
+            throw new NullPointerException("Table is empty or no matches");
         }
         List<Building> buildingList = new ArrayList<>();
         for (List<Object> row : values) {
-            if (Boolean.parseBoolean(row.get(1).toString())) {
-                buildingList.add(new Building((String) row.get(0), Boolean.parseBoolean(row.get(1).toString())));
-            }
+            buildingList.add(new Building((String) row.get(0), Boolean.parseBoolean(row.get(1).toString())));
         }
         return buildingList;
+    }
+
+
+    @Override
+    public List<Building> getAllActualBuildings() {
+        return getAllBuildings().stream().filter(Building::getIsActive).toList();
     }
 }

@@ -6,7 +6,6 @@ import com.bot.employeeTimeTrackingBot.model.User;
 import com.bot.employeeTimeTrackingBot.repository.ReportRepository;
 import com.bot.employeeTimeTrackingBot.service.SheetsService;
 import com.google.api.services.sheets.v4.Sheets;
-import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,7 +16,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 @Repository
@@ -53,25 +51,13 @@ public class ReportRepositoryImpl implements ReportRepository {
                     row.set(2, Long.parseLong(String.valueOf(row.get(2))));
                     row.set(1, LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")));
                     row.add(5, hours);
-                    ValueRange updateBody = new ValueRange().setValues(Collections.singletonList(row));
-                    UpdateValuesResponse result;
-                    try {
-                        result = sheets.spreadsheets()
-                                .values()
-                                .update(tableId, updateRange, updateBody)
-                                .setValueInputOption("RAW")
-                                .execute();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    sheetsService.writeNext(SheetsName.LOGS, "!A", "!A",
-                            new ArrayList<>(Collections.singleton(row.toString())));
-                    return !result.isEmpty();
+                    return sheetsService.updateInto(row, updateRange, sheets, tableId, sheetsService);
                 }
             }
         }
         return false;
     }
+
 
     @Override
     public void sendFirstReportToTable(User userFromTable, Building building) {

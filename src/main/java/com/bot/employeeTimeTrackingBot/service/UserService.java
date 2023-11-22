@@ -3,6 +3,7 @@ package com.bot.employeeTimeTrackingBot.service;
 import com.bot.employeeTimeTrackingBot.bot.TimeTrackingBot;
 import com.bot.employeeTimeTrackingBot.model.User;
 import com.bot.employeeTimeTrackingBot.repository.UserRepository;
+import javassist.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
@@ -53,11 +55,19 @@ public class UserService {
     }
 
     public User readUserFromTableByChatId(Long chatId) {
-        return repository.readUserFromTableByChatId(chatId).get();
+        Optional<User> user = repository.readUserFromTableByChatId(chatId);
+        try {
+            if (user.isPresent()) {
+                return user.get();
+            }
+            throw new NotFoundException("user with chatId " + chatId + " not found");
+        } catch (NotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public void changeFlag(Long chatId) {
-        repository.changeFlag(chatId);
+    public boolean changeFlag(Long chatId) {
+        return repository.changeFlag(chatId);
     }
 
     public double getTotalMouthHoursForUser(Long chatId) {
@@ -70,5 +80,9 @@ public class UserService {
 
     public List<User> getAllActualUsers() {
         return repository.getAllActualUsers();
+    }
+
+    public List<User> getAllWorkingUsers() {
+        return repository.getAllWorkingUsers();
     }
 }
