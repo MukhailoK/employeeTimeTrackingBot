@@ -3,10 +3,12 @@ package com.bot.employeeTimeTrackingBot.transformer;
 import com.bot.employeeTimeTrackingBot.model.User;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-public class SheetsTransformer {
-    public List<Object> transformToData(User user) {
+public class SheetsMapper {
+
+    public static List<Object> transformToData(User user) {
         return Arrays.asList(user.isAccess(),
                 user.isSendReport(),
                 user.getLocale(),
@@ -14,13 +16,15 @@ public class SheetsTransformer {
                 user.getDateConnecting(),
                 user.getChatId(),
                 user.getNickName(),
-                user.getFullName(),
-                user.getDateLastReport(),
-                user.getHours()
+                user.getFullName()
         );
     }
 
-    public User transformToEntity(List<Object> cells) {
+    public static List<Object> transformToLog(User user) {
+        return Collections.singletonList(user.toString());
+    }
+
+    public static User transformToEntity(List<Object> cells) {
         User user = new User();
         user.setAccess(Boolean.parseBoolean(cells.get(0).toString()));
         user.setSendReport(Boolean.parseBoolean(cells.get(1).toString()));
