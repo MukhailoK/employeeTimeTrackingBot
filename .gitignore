@@ -3,7 +3,9 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-src/main/java/keys/Key.java
+src/main/resources/credentials.json
+src/main/resources/service-key.json
+src/main/resources/telegram-bot-399807-753fca5cb5d2.json
 ### STS ###
 .apt_generated
 .classpath
