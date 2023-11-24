@@ -29,9 +29,11 @@ public class SheetRepositoryImpl implements SheetRepository {
 
     @Override
     public void writeNext(String sheetsName, String colum, String columSearch, List<Object> rowData) {
-        String range = sheetsName + colum + (getLastRow(sheetsName + columSearch + columSearch.replace('!', ':')) + 1);
+        String range = sheetsName + colum +
+                (getLastRow(sheetsName + columSearch + columSearch.replace('!', ':')) + 1);
         ValueRange request = new ValueRange().setValues(Collections.singletonList(rowData)).setRange(range);
-        BatchUpdateValuesRequest batchUpdateRequest = new BatchUpdateValuesRequest().setValueInputOption("RAW").setData(List.of(request));
+        BatchUpdateValuesRequest batchUpdateRequest =
+                new BatchUpdateValuesRequest().setValueInputOption("RAW").setData(List.of(request));
         try {
             sheets.spreadsheets().values().batchUpdate(tableId, batchUpdateRequest).execute();
         } catch (IOException e) {
@@ -57,7 +59,11 @@ public class SheetRepositoryImpl implements SheetRepository {
     }
 
     @Override
-    public boolean updateInto(List<Object> row, String updateRange, Sheets sheets, String tableId, SheetsService sheetsService) {
+    public boolean updateInto(List<Object> row,
+                              String updateRange,
+                              Sheets sheets,
+                              String tableId,
+                              SheetsService sheetsService) {
         ValueRange updateBody = new ValueRange().setValues(Collections.singletonList(row));
         UpdateValuesResponse result;
         try {

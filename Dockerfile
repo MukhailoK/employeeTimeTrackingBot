@@ -1,4 +1,5 @@
 ## Dockerfile
+#latest version 3.2.0
 
 FROM eclipse-temurin:17-jdk-jammy
 

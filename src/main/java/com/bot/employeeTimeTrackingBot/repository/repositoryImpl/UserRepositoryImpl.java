@@ -7,6 +7,8 @@ import com.bot.employeeTimeTrackingBot.service.SheetsService;
 import com.bot.employeeTimeTrackingBot.transformer.SheetsMapper;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.*;
+import javassist.NotFoundException;
+import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
@@ -33,6 +35,7 @@ public class UserRepositoryImpl implements UserRepository {
         this.sheetsService = sheetsService;
     }
 
+    @SneakyThrows
     @Override
     public List<User> getAllActualUsers() {
         String range = USERS + "!A2:J";
@@ -45,7 +48,7 @@ public class UserRepositoryImpl implements UserRepository {
 
         List<List<Object>> values = response.getValues();
         if (values == null || values.isEmpty()) {
-            return null; // Таблиця пуста або немає даних
+          throw new NotFoundException("actual users not found exception");
         }
         List<User> usersList = new ArrayList<>();
         for (List<Object> row : values) {
@@ -90,9 +93,9 @@ public class UserRepositoryImpl implements UserRepository {
                         DeleteDimensionRequest deleteRequest = new DeleteDimensionRequest();
                         deleteRequest.setRange(new DimensionRange()
                                 .setSheetId(0)
-                                .setDimension("ROWS") // Видаляємо рядок.
-                                .setStartIndex(i + 1) // З індекса 0 (нумерація починається з 0).
-                                .setEndIndex(i + 2)); //
+                                .setDimension("ROWS")
+                                .setStartIndex(i + 1)
+                                .setEndIndex(i + 2));
                         Request request = new Request()
                                 .setDeleteDimension(deleteRequest);
                         List<Request> requests = new ArrayList<>();
@@ -121,7 +124,7 @@ public class UserRepositoryImpl implements UserRepository {
         }
         List<List<Object>> values = response.getValues();
         if (values.isEmpty()) {
-            return false; // Таблиця пуста або немає даних
+            return false;
         }
 
         for (int i = 0; i < values.size(); i++) {
@@ -130,7 +133,7 @@ public class UserRepositoryImpl implements UserRepository {
                 User user = SheetsMapper.transformToEntity(row);
                 user.setAccess(!user.isAccess());
                 row = SheetsMapper.transformToData(user);
-                range = "!A" + (2 + i); // Оновити комірку "Дата і час прийшов" у відповідному рядку
+                range = "!A" + (2 + i);
                 String updateRange = USERS + range;
                 return sheetsService.updateInto(row, updateRange, sheets, tableId, sheetsService);
             }
@@ -175,7 +178,7 @@ public class UserRepositoryImpl implements UserRepository {
 
         List<List<Object>> values = response.getValues();
         if (values == null || values.isEmpty()) {
-            return Optional.empty(); // Таблиця пуста або немає даних
+            return Optional.empty();
         }
         for (List<Object> row : values) {
             if (row.size() >= 5) {

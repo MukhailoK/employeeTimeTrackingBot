@@ -1,5 +1,7 @@
 package com.bot.employeeTimeTrackingBot.transformer;
 
+import com.bot.employeeTimeTrackingBot.model.Building;
+import com.bot.employeeTimeTrackingBot.model.Report;
 import com.bot.employeeTimeTrackingBot.model.User;
 
 import java.util.Arrays;
@@ -11,14 +13,39 @@ public class SheetsMapper {
     public static List<Object> transformToData(User user) {
         return Arrays.asList(user.isAccess(),
                 user.isSendReport(),
-                user.getLocale(),
-                user.getName(),
-                user.getDateConnecting(),
-                user.getChatId(),
-                user.getNickName(),
-                user.getFullName()
+                user.getLocale() == null ? "" : user.getLocale(),
+                user.getName() == null ? "" : user.getName(),
+                user.getDateConnecting() == null ? "" : user.getDateConnecting(),
+                user.getChatId() == 0L ? "" : user.getChatId(),
+                user.getNickName() == null ? "" : user.getNickName(),
+                user.getFullName() == null ? "" : user.getFullName()
         );
     }
+
+    public static List<Object> transformToData(Report report) {
+        return Arrays.asList(
+                report.getDateStart() == null ? "" : report.getDateStart(),
+                report.getDateEnd() == null ? "" : report.getDateEnd(),
+                report.getChatId() == 0L ? "" : report.getChatId(),
+                report.getUserName() == null ? "" : report.getUserName(),
+                report.getBuilding().getAddress() == null ? "" : report.getBuilding().getAddress(),
+                report.getHours() == 0 ? "" : report.getHours(),
+                report.getPlaceUrl() == null ? "" : report.getPlaceUrl()
+        );
+    }
+
+    public static Report transformToReportEntity(List<Object> cells) {
+        Report report = new Report();
+        report.setDateStart(String.valueOf(cells.get(0)));
+        report.setDateEnd(String.valueOf(cells.get(1)));
+        report.setChatId(Integer.parseInt(String.valueOf(cells.get(2))));
+        report.setUserName(String.valueOf(cells.get(3)));
+        report.setBuilding(new Building(String.valueOf(cells.get(4)), true));
+        report.setHours(Double.parseDouble(String.valueOf(cells.get(5))));
+        report.setPlaceUrl(String.valueOf(cells.get(6)));
+        return report;
+    }
+
 
     public static List<Object> transformToLog(User user) {
         return Collections.singletonList(user.toString());

@@ -2,6 +2,7 @@ package com.bot.employeeTimeTrackingBot.repository.repositoryImpl;
 
 import com.bot.employeeTimeTrackingBot.data.SheetsName;
 import com.bot.employeeTimeTrackingBot.model.Building;
+import com.bot.employeeTimeTrackingBot.model.Report;
 import com.bot.employeeTimeTrackingBot.model.User;
 import com.bot.employeeTimeTrackingBot.repository.ReportRepository;
 import com.bot.employeeTimeTrackingBot.service.SheetsService;
@@ -17,6 +18,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static com.bot.employeeTimeTrackingBot.transformer.SheetsMapper.transformToData;
 
 @Repository
 public class ReportRepositoryImpl implements ReportRepository {
@@ -34,7 +37,7 @@ public class ReportRepositoryImpl implements ReportRepository {
 
     @Override
     public boolean updateReport(long chatId, double hours) {
-        String range = SheetsName.REPORTS + "!A2:I";
+        String range = SheetsName.REPORTS + "!A2:F";
         ValueRange response;
         try {
             response = sheets.spreadsheets().values().get(tableId, range).execute();
@@ -46,7 +49,7 @@ public class ReportRepositoryImpl implements ReportRepository {
             List<Object> row = values.get(i);
             if (row.size() >= 3 && Long.parseLong(row.get(2).toString()) == chatId) {
                 if (row.get(1) == null || row.get(1).toString().isEmpty()) {
-                    String range1 = "!A" + (2 + i); // Оновити комірку "Дата і час прийшов" у відповідному рядку
+                    String range1 = "!A" + (2 + i);
                     String updateRange = SheetsName.REPORTS + range1;
                     row.set(2, Long.parseLong(String.valueOf(row.get(2))));
                     row.set(1, LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")));
@@ -70,4 +73,11 @@ public class ReportRepositoryImpl implements ReportRepository {
                         building.getAddress(),
                         "")));
     }
+
+    @Override
+    public void sendFirstReport(Report report) {
+        sheetsService.writeNext(SheetsName.REPORTS, "!A", "!A", transformToData(report));
+    }
+
+
 }

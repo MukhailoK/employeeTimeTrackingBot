@@ -1,6 +1,7 @@
 package com.bot.employeeTimeTrackingBot.bot;
 
 import com.bot.employeeTimeTrackingBot.model.Building;
+import com.bot.employeeTimeTrackingBot.model.User;
 import com.bot.employeeTimeTrackingBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -9,18 +10,49 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
 import java.util.*;
 
 
 @Component
 public class BotResponseMapper {
+    public static final String ADDRESS_PREFIX = "adr:";
     private final UserService userService;
 
     @Autowired
     public BotResponseMapper(UserService userService) {
         this.userService = userService;
+    }
+
+
+    public ReplyKeyboardMarkup createLocationRequestKeyboard() {
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow keyboardRow = new KeyboardRow();
+        keyboardRow.add(new KeyboardButton("Так"));
+        keyboardRow.get(0).setRequestLocation(true);
+        keyboardRow.add(new KeyboardButton("Ні"));
+
+        keyboardRows.add(keyboardRow);
+        replyKeyboardMarkup.setKeyboard(keyboardRows);
+        replyKeyboardMarkup.setOneTimeKeyboard(true);
+
+        return replyKeyboardMarkup;
+    }
+
+    public ReplyKeyboardRemove createRemoveKeyboard() {
+        ReplyKeyboardRemove replyKeyboardRemove = new ReplyKeyboardRemove();
+        replyKeyboardRemove.setSelective(true);
+        replyKeyboardRemove.setRemoveKeyboard(true);
+        return replyKeyboardRemove;
     }
 
     public SendMessage sendListOfObjects(String message_, long chatId, List<List<InlineKeyboardButton>> rowsInline) {
@@ -46,7 +78,7 @@ public class BotResponseMapper {
             Integer messageId = message.getMessageId();
             return new DeleteMessage(chatId.toString(), messageId);
         }
-        return null;
+        throw new RuntimeException();
     }
 
     public SendMessage sendMessageWithButton(long chatId, String message_, String title, String resultPushButton) {
@@ -90,7 +122,7 @@ public class BotResponseMapper {
             List<InlineKeyboardButton> rowLine = new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton();
             button.setText(building.getAddress());
-            button.setCallbackData(building.getAddress());
+            button.setCallbackData(ADDRESS_PREFIX + building.getAddress());
             rowLine.add(button);
             rowsInLine.add(rowLine);
         }
@@ -118,6 +150,39 @@ public class BotResponseMapper {
         return rowsInLine;
     }
 
+    // TODO: 23.11.2023
+    //  add locale message for admin
+    //  *//
+
+    public List<List<InlineKeyboardButton>> getAdminMenu(Update update) {
+        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+        long chatId = update.getMessage().getChatId();
+        InlineKeyboardButton button1 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> firstRow = new ArrayList<>();
+        String locale = userService.readUserFromTableByChatId(chatId).getLocale();
+
+        button1.setText(getString("request_open_shift", locale));
+        button1.setCallbackData("/first");
+        firstRow.add(button1);
+        rowsInLine.add(firstRow);
+
+        InlineKeyboardButton button2 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> secondRow = new ArrayList<>();
+        button2.setText(getString("request_close_shift", locale));
+        button2.setCallbackData("/second");
+        secondRow.add(button2);
+        rowsInLine.add(secondRow);
+
+        InlineKeyboardButton button3 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> thirdRow = new ArrayList<>();
+        button3.setText(getString("exit", locale));
+        button3.setCallbackData("/exit");
+        thirdRow.add(button3);
+        rowsInLine.add(thirdRow);
+        return rowsInLine;
+
+    }
+
     public String getString(String key, String locale) {
         Locale userLocale = determineUserLocale(locale);
         ResourceBundle resourceBundle = ResourceBundle.getBundle("messages", userLocale);
@@ -137,6 +202,21 @@ public class BotResponseMapper {
         } catch (MissingResourceException e) {
             return "Message not found for key: " + key;
         }
+    }
+
+    public void buildIgnoreButton(User user,
+                                  List<List<InlineKeyboardButton>> rowsInLine,
+                                  InlineKeyboardButton button1) {
+        List<InlineKeyboardButton> firstRow = new ArrayList<>();
+        firstRow.add(button1);
+        rowsInLine.add(firstRow);
+
+        InlineKeyboardButton button2 = new InlineKeyboardButton();
+        button2.setText(getString("ignor", user.getLocale()));
+        button2.setCallbackData("ignor");
+        List<InlineKeyboardButton> secondRow = new ArrayList<>();
+        secondRow.add(button2);
+        rowsInLine.add(secondRow);
     }
 
     public static Locale determineUserLocale(String locale) {
