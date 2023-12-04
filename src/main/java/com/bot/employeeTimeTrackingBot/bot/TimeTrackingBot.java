@@ -1,6 +1,5 @@
 package com.bot.employeeTimeTrackingBot.bot;
 
-import com.bot.employeeTimeTrackingBot.loger.MyLogger;
 import com.bot.employeeTimeTrackingBot.model.Building;
 import com.bot.employeeTimeTrackingBot.model.Report;
 import com.bot.employeeTimeTrackingBot.model.User;
@@ -8,7 +7,7 @@ import com.bot.employeeTimeTrackingBot.service.BuildingService;
 import com.bot.employeeTimeTrackingBot.service.ReportService;
 import com.bot.employeeTimeTrackingBot.service.UserService;
 import lombok.SneakyThrows;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,7 +20,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,26 +32,25 @@ import static com.bot.employeeTimeTrackingBot.bot.BotResponseMapper.ADDRESS_PREF
 import static com.bot.employeeTimeTrackingBot.data.Admin.ADMIN_CHAT_ID;
 
 @Component
+@Slf4j
 public class TimeTrackingBot extends TelegramLongPollingBot {
-    // private static final LocalTime TIME_START_SETTING_REPORT = LocalTime.of(18, 0);
-    // private static final LocalTime TIME_STOP_GETTING_REPORT = LocalTime.of(23, 59, 59);
-    private static final String CHRONO_START_MORNING_NOTIFICATION = "0 0 7 * * ?";
-    private static final String CHRONO_START_EVENING_NOTIFICATION = "0 0 17 * * ?";
-    //    private static final Logger logger = LoggerFactory.getLogger(TimeTrackingBot.class);
-    private Map<Long, Report> reportDrafts = new HashMap<>();
-    private final UserService userService;
-    private final ReportService reportService;
-    private final BuildingService buildingService;
-    private final BotResponseMapper botResponseMapper;
-    private final MyLogger logger;
-    Building choseBuilding = null;
-    private Message message = null;
-
     @Value("${telegram.bot.token}")
     private String token;
 
     @Value("${telegram.bot.name}")
     private String name;
+
+    // private static final LocalTime TIME_START_SETTING_REPORT = LocalTime.of(18, 0);
+    // private static final LocalTime TIME_STOP_GETTING_REPORT = LocalTime.of(23, 59, 59);
+    private static final String CHRONO_START_MORNING_NOTIFICATION = "0 0 7 * * ?";
+    private static final String CHRONO_START_EVENING_NOTIFICATION = "0 0 17 * * ?";
+    private Map<Long, Report> reportDrafts = new HashMap<>();
+    private Map<Long, Building> choseBuildings = new HashMap<>();
+    private Map<Long, Message> messages = new HashMap<>();
+    private final UserService userService;
+    private final ReportService reportService;
+    private final BuildingService buildingService;
+    private final BotResponseMapper botResponseMapper;
 
 
     @Autowired
@@ -63,30 +62,40 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         this.reportService = reportService;
         this.buildingService = buildingService;
         this.botResponseMapper = botResponseMapper;
-        this.logger = new MyLogger(LoggerFactory.getLogger(TimeTrackingBot.class));
     }
 
+    @Override
+    public String getBotUsername() {
+        return name;
+    }
+
+    @Override
+    public String getBotToken() {
+        return token;
+    }
 
     //Head bot method
+
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
-        logger.startMethodLog("onUpdateReceived(Update update)");
+        log.info("onUpdateReceived(Update update)");
         registration(update);
         adminCommandCatcher(update);
         morningReportsCatcher(update);
         eveningReportsCatcher(update);
-        logger.endMethodLog("onUpdateReceived(Update update)");
+        log.info("onUpdateReceived(Update update)");
     }
 
     public void deleteLastMessageAndRequestLocation(Update update) throws TelegramApiException {
         long chatId = update.getCallbackQuery().getMessage().getChatId();
         reportDrafts.put(chatId, new Report());
+        User user = userService.readUserFromTableByChatId(chatId);
         executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
-        sendMessage.setText("Дозвольте отримати ваше місцезнаходження?↙️↘️");
-        sendMessage.setReplyMarkup(botResponseMapper.createLocationRequestKeyboard());
+        sendMessage.setText(botResponseMapper.getString("transmit_location_qst", user.getLocale()));
+        sendMessage.setReplyMarkup(botResponseMapper.createLocationRequestKeyboard(user.getLocale()));
         execute(sendMessage);
     }
 
@@ -95,51 +104,32 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         reportDrafts.put(chatId, new Report());
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
-        sendMessage.setText("Дякую!");
         sendMessage.setReplyMarkup(botResponseMapper.createRemoveKeyboard());
+        sendMessage.setText("☕");
         execute(sendMessage);
     }
 
-    @Override
-    public String getBotUsername() {
-        logger.startMethodLog("getBotUsername()");
-        return name;
+
+    public void executeMessage(SendMessage message) throws TelegramApiException {
+
+        log.info("executeMessage(SendMessage message)");
+        execute(message);
+
+        log.info("executeMessage(SendMessage message)");
     }
 
-    @Override
-    public String getBotToken() {
-        logger.startMethodLog("getBotToken()");
-        return token;
+    public void executeMessage(DeleteMessage message) throws TelegramApiException {
+        log.info("executeMessage(DeleteMessage message)");
+        execute(message);
+
+        log.info("executeMessage(DeleteMessage message)");
     }
 
-
-    public void executeMessage(SendMessage message) {
-        try {
-            logger.startMethodLog("executeMessage(SendMessage message)");
-            execute(message);
-        } catch (TelegramApiException e) {
-            logger.exceptionLog("execute", e.getMessage());
-            throw new RuntimeException(e);
-        }
-        logger.endMethodLog("executeMessage(SendMessage message)");
-    }
-
-    public void executeMessage(DeleteMessage message) {
-        try {
-            logger.startMethodLog("executeMessage(DeleteMessage message)");
-            execute(message);
-        } catch (TelegramApiException e) {
-            logger.exceptionLog("delete bot message", e.getMessage());
-            throw new RuntimeException(e);
-        }
-        logger.endMethodLog("executeMessage(DeleteMessage message)");
-    }
-
-    public void adminCommandCatcher(Update update) {
+    public void adminCommandCatcher(Update update) throws TelegramApiException {
         if (update.hasMessage() && update.getMessage().getChatId() == ADMIN_CHAT_ID && "/admin".equals(update.getMessage().getText())) {
             long chatId = update.getMessage().getChatId();
             String locale = userService.readUserFromTableByChatId(chatId).getLocale();
-            logger.startMethodLog("adminCommandCatcher(Update update)");
+            log.info("adminCommandCatcher(Update update)");
             executeMessage(botResponseMapper.sendListOfObjects(
                     botResponseMapper.getString("hello_admin", locale), chatId, botResponseMapper.getAdminMenu(update)));
             return;
@@ -147,7 +137,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         if (update.hasCallbackQuery() && "/first".equals(update.getCallbackQuery().getData())) {
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             String locale = userService.readUserFromTableByChatId(chatId).getLocale();
-            logger.info("admin initiated sending 'open report'");
+            log.info("admin initiated sending 'open report'");
             executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             executeMessage(botResponseMapper.sendMessage(
                     botResponseMapper.getString("respond_open_shift", locale), chatId));
@@ -157,7 +147,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         if (update.hasCallbackQuery() && "/second".equals(update.getCallbackQuery().getData())) {
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             String locale = userService.readUserFromTableByChatId(chatId).getLocale();
-            logger.info("admin initiated sending 'close report'");
+            log.info("admin initiated sending 'close report'");
             executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             executeMessage(botResponseMapper.sendMessage(
                     botResponseMapper.getString("respond_close_shift", locale), chatId));
@@ -186,7 +176,8 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             populateSelectedBuilding(update, buildings);
             return;
         }
-        if (update.hasCallbackQuery() && "accept".equals(update.getCallbackQuery().getData()) && choseBuilding != null) {
+        if (update.hasCallbackQuery() && "accept".equals(update.getCallbackQuery().getData()) &&
+                choseBuildings.get(update.getCallbackQuery().getMessage().getChatId()) != null) {
             populateAndSubmitReport(update);
             return;
         }
@@ -197,7 +188,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         }
     }
 
-    private void eveningReportsCatcher(Update update) {
+    private void eveningReportsCatcher(Update update) throws Exception {
         if (update.hasCallbackQuery() && "second".equals(update.getCallbackQuery().getData())) {
             responseCloseReport(update);
             return;
@@ -206,20 +197,17 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             sayBye(update);
             return;
         }
-        try {
-            if (update.hasMessage() && update.getMessage().getText().length() <= 3 &&
-                    (Double.parseDouble(update.getMessage().getText()) > 0)) {
 
-                updateReport(update);
-            }
-        } catch (Exception e) {
-            logger.exceptionLog("eveningReportsCatcher(Update update)", e.getMessage());
+        if (update.hasMessage() && update.getMessage().getText().length() <= 3 &&
+                (Double.parseDouble(update.getMessage().getText()) > 0)) {
+
+            updateReport(update);
         }
     }
 
-    private void responseCloseReport(Update update) {
+    private void responseCloseReport(Update update) throws TelegramApiException {
         User userFromTable;
-        logger.startMethodLog("eveningReportsCatcher(Update update)");
+        log.info("eveningReportsCatcher(Update update)");
         userFromTable = userService
                 .readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
         if (userFromTable.isAccess()) {
@@ -230,21 +218,22 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sayBye(Update update) {
+    private void sayBye(Update update) throws TelegramApiException {
         User userFromTable;
-        logger.startMethodLog("eveningReportsCatcher(Update update)");
+        log.info("eveningReportsCatcher(Update update)");
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
         userFromTable = userService
-                .readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
-        message = update.getCallbackQuery().getMessage();
+                .readUserFromTableByChatId(chatId);
+        messages.put(chatId, update.getCallbackQuery().getMessage());
         executeMessage(botResponseMapper
-                .deleteLastBotMessage(message));
+                .deleteLastBotMessage(messages.get(chatId)));
         executeMessage(botResponseMapper
                 .sendMessage(botResponseMapper.getString("have_a_nice_day", userFromTable.getLocale()),
-                        message.getChatId()));
-        logger.endMethodLog("eveningReportsCatcher(Update update)");
+                        chatId));
+        log.info("eveningReportsCatcher(Update update)");
     }
 
-    private void updateReport(Update update) {
+    private void updateReport(Update update) throws TelegramApiException {
         User userFromTable;
         userFromTable = userService
                 .readUserFromTableByChatId(update.getMessage().getChatId());
@@ -267,7 +256,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
                                             userFromTable.getLocale()) +
                                             userService.getTotalMouthHoursForUser(update.getMessage().getChatId()),
                                     userFromTable.getChatId()));
-                    logger.endMethodLog("eveningReportsCatcher(Update update)");
+                    log.info("eveningReportsCatcher(Update update)");
                 }
             } else {
                 executeMessage(botResponseMapper
@@ -278,7 +267,7 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         }
     }
 
-    private void returnToPreviousMenu(Update update, List<Building> buildings) {
+    private void returnToPreviousMenu(Update update, List<Building> buildings) throws TelegramApiException {
         User userFromTable;
         executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
         String locale = update.getCallbackQuery().getFrom().getLanguageCode();
@@ -290,12 +279,13 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
                 userFromTable.getChatId(), rowsInLine));
     }
 
-    private void populateAndSubmitReport(Update update) {
+    private void populateAndSubmitReport(Update update) throws TelegramApiException {
         User userFromTable;
         userFromTable = userService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
         Long chatId = update.getCallbackQuery().getMessage().getChatId();
         if (!userFromTable.isAccess()) {
             if (userService.changeFlag(update.getCallbackQuery().getMessage().getChatId())) {
+                DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
                 DeleteMessage deleteMessage = botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage());
                 executeMessage(deleteMessage);
 
@@ -305,9 +295,9 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
                 executeMessage(sendMessage);
 
                 reportDrafts.get(chatId).setUserName(userFromTable.getName());
-                reportDrafts.get(chatId).setDateStart(LocalDateTime.now()
-                        .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")));
-                reportDrafts.get(chatId).setBuilding(choseBuilding);
+                reportDrafts.get(chatId).setDateStart( ZonedDateTime.
+                        now(ZoneId.of("Europe/Berlin")).format(dateTimeFormatter));
+                reportDrafts.get(chatId).setBuilding(choseBuildings.get(chatId));
                 reportDrafts.get(chatId).setChatId(userFromTable.getChatId());
 
                 reportService.sendFirstReport(reportDrafts.get(chatId));
@@ -317,16 +307,17 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
 
                 executeMessage(sendMessage);
 
-                logger.endMethodLog("morningReportsCatcher(Update update)");
+                log.info("morningReportsCatcher(Update update)");
             }
         }
     }
 
-    private void populateSelectedBuilding(Update update, List<Building> buildings) {
+    private void populateSelectedBuilding(Update update, List<Building> buildings) throws TelegramApiException {
         User userFromTable;
         for (Building building : buildings) {
             if (update.hasCallbackQuery() && (ADDRESS_PREFIX + building.getAddress()).equals(update.getCallbackQuery().getData())) {
-                choseBuilding = building;
+                long chatId = update.getCallbackQuery().getMessage().getChatId();
+                choseBuildings.put(chatId, building);
                 userFromTable = userService
                         .readUserFromTableByChatId(update.getCallbackQuery()
                                 .getMessage()
@@ -342,10 +333,10 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
         }
     }
 
-    private void populateUrlWithLocation(Update update, List<Building> buildings) {
+    private void populateUrlWithLocation(Update update, List<Building> buildings) throws TelegramApiException {
         User userFromTable = userService.readUserFromTableByChatId(update.getMessage().getChatId());
 
-        logger.startMethodLog("morningReportsCatcher(Update update)");
+        log.info("morningReportsCatcher(Update update)");
 
         String locale = userFromTable.getLocale();
         List<List<InlineKeyboardButton>> rowsInLine = botResponseMapper.getRowsInLineWithBuildings(buildings);
@@ -357,20 +348,20 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
 
     }
 
-    private void registration(Update update) {
+    private void registration(Update update) throws TelegramApiException {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String locale = update.getMessage().getFrom().getLanguageCode();
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
-            message = update.getMessage();
+            messages.put(chatId, update.getMessage());
             User user = new User();
             user.setName(update.getMessage().getFrom().getFirstName() +
                     " " + update.getMessage().getFrom().getLastName());
 
             //start bot (get first command /start)
             if (messageText.equals("/start")) {
-                logger.startMethodLog(" registration(Update update)");
-                logger.info("command -> /start");
+                log.info(" registration(Update update)");
+                log.info("command -> /start");
                 executeMessage(botResponseMapper
                         .sendMessageWithButton(Long.parseLong(String.valueOf(chatId)),
                                 botResponseMapper.getString("start", locale),
@@ -380,11 +371,11 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
 
             //stop bot (get command /stop) and delete user data from Google sheet by chat id
             else if (messageText.equals("/stop")) {
-                logger.startMethodLog(" registration(Update update)");
-                logger.info("command -> stop");
-                executeMessage(botResponseMapper.sendMessage("your data has been deleted", message.getChatId()));
-                userService.deleteUser(message.getChatId());
-                logger.endMethodLog("registration(Update update)");
+                log.info(" registration(Update update)");
+                log.info("command -> stop");
+                executeMessage(botResponseMapper.sendMessage("your data has been deleted", chatId));
+                userService.deleteUser(chatId);
+                log.info("registration(Update update)");
                 return;
             }
         }
@@ -393,10 +384,10 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             String callbackData = update.getCallbackQuery().getData();
             String locale = update.getCallbackQuery().getFrom().getLanguageCode();
             if ("yes".equals(callbackData)) {
-                logger.info("button 'Yes' pushed");
+                log.info("button 'Yes' pushed");
                 long chatId = update.getCallbackQuery().getMessage().getChatId();
                 if (!userService.isPresent(chatId)) {
-                    User user = userService.registration(message);
+                    User user = userService.registration(messages.get(chatId));
                     if (user != null) {
                         executeMessage(botResponseMapper
                                 .sendRegistrationResponse(update));
@@ -409,15 +400,15 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
                             .sendMessage(botResponseMapper.getString("workplace_already_registered", locale), chatId));
                 }
                 executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
-                logger.endMethodLog("registration(Update update)");
+                log.info("registration(Update update)");
             }
         }
     }
 
-    @Scheduled(cron = CHRONO_START_MORNING_NOTIFICATION, zone = "GMT+1:00")
-    private void sendMorningDailyMessageToAllUsers() {
-        logger.startMethodLog("sendMorningDailyMessageToAllUsers()");
-        logger.info("Get all actual users from google sheet");
+    @Scheduled(cron = CHRONO_START_MORNING_NOTIFICATION, zone = "Europe/Berlin")
+    public void sendMorningDailyMessageToAllUsers() throws TelegramApiException {
+        log.info("sendMorningDailyMessageToAllUsers()");
+        log.info("Get all actual users from google sheet");
         List<User> userList = userService.getAllActualUsers().stream().filter(user -> !user.isAccess()).toList();
 
         for (User user : userList) {
@@ -439,20 +430,20 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
                             rowsInLine));
         }
 
-        logger.endMethodLog("sendMorningDailyMessageToAllUsers()");
+        log.info("sendMorningDailyMessageToAllUsers()");
     }
 
     @Scheduled(cron = CHRONO_START_EVENING_NOTIFICATION, zone = "GMT+1:00")
-    private void sendDailyMessageToAllUsers() {
-        logger.startMethodLog("sendDailyMessageToAllUsers()");
-        logger.info("Get all actual users from google sheet");
+    public void sendDailyMessageToAllUsers() throws TelegramApiException {
+        log.info("sendDailyMessageToAllUsers()");
+        log.info("Get all actual users from google sheet");
         List<User> userList = userService.getAllActualUsers().stream().filter(User::isAccess).toList();
 
         for (User user : userList) {
             List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
 
             InlineKeyboardButton button1 = new InlineKeyboardButton();
-            button1.setText(botResponseMapper.getString("close_Shift", user.getLocale()));
+            button1.setText(botResponseMapper.getString("close_shift", user.getLocale()));
             button1.setCallbackData("second");
             botResponseMapper.buildIgnoreButton(user, rowsInLine, button1);
             String eveningGreeting = botResponseMapper.getString("good_evening", user.getName(),
@@ -464,6 +455,6 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
                             user.getChatId(),
                             rowsInLine));
         }
-        logger.endMethodLog("sendDailyMessageToAllUsers()");
+        log.info("sendDailyMessageToAllUsers()");
     }
 }

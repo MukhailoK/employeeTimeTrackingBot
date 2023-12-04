@@ -14,6 +14,8 @@ import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +27,7 @@ import static com.bot.employeeTimeTrackingBot.transformer.SheetsMapper.transform
 public class ReportRepositoryImpl implements ReportRepository {
     private final Sheets sheets;
     private final SheetsService sheetsService;
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
     @Value("${google.api.table.id}")
     private String tableId;
@@ -52,7 +55,8 @@ public class ReportRepositoryImpl implements ReportRepository {
                     String range1 = "!A" + (2 + i);
                     String updateRange = SheetsName.REPORTS + range1;
                     row.set(2, Long.parseLong(String.valueOf(row.get(2))));
-                    row.set(1, LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")));
+                    row.set(1, ZonedDateTime.
+                            now(ZoneId.of("Europe/Berlin")).format(dateTimeFormatter));
                     row.add(5, hours);
                     return sheetsService.updateInto(row, updateRange, sheets, tableId, sheetsService);
                 }
@@ -65,8 +69,8 @@ public class ReportRepositoryImpl implements ReportRepository {
     @Override
     public void sendFirstReportToTable(User userFromTable, Building building) {
         sheetsService.writeNext(SheetsName.REPORTS, "!A", "!A", new ArrayList<>(Arrays
-                .asList(LocalDateTime.now()
-                                .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")),
+                .asList(ZonedDateTime.
+                                now(ZoneId.of("Europe/Berlin")).format(dateTimeFormatter),
                         "",
                         Long.parseLong(String.valueOf(userFromTable.getChatId())),
                         userFromTable.getName(),

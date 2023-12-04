@@ -4,8 +4,8 @@ import com.bot.employeeTimeTrackingBot.model.Building;
 import com.bot.employeeTimeTrackingBot.model.Report;
 import com.bot.employeeTimeTrackingBot.model.User;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class SheetsMapper {
@@ -48,7 +48,11 @@ public class SheetsMapper {
 
 
     public static List<Object> transformToLog(User user) {
-        return Collections.singletonList(user.toString());
+        return Arrays.asList(LocalDateTime.now(), user.toString());
+    }
+
+    public static List<Object> transformToLog(Report report) {
+        return Arrays.asList(LocalDateTime.now(), report.toString());
     }
 
     public static User transformToEntity(List<Object> cells) {

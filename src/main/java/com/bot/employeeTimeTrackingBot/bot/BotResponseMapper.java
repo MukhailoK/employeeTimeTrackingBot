@@ -30,16 +30,16 @@ public class BotResponseMapper {
     }
 
 
-    public ReplyKeyboardMarkup createLocationRequestKeyboard() {
+    public ReplyKeyboardMarkup createLocationRequestKeyboard(String locale) {
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setResizeKeyboard(true);
 
         List<KeyboardRow> keyboardRows = new ArrayList<>();
         KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add(new KeyboardButton("Так"));
+        keyboardRow.add(new KeyboardButton(getString("yes", locale)));
         keyboardRow.get(0).setRequestLocation(true);
-        keyboardRow.add(new KeyboardButton("Ні"));
+        keyboardRow.add(new KeyboardButton(getString("no", locale)));
 
         keyboardRows.add(keyboardRow);
         replyKeyboardMarkup.setKeyboard(keyboardRows);
@@ -150,10 +150,6 @@ public class BotResponseMapper {
         return rowsInLine;
     }
 
-    // TODO: 23.11.2023
-    //  add locale message for admin
-    //  *//
-
     public List<List<InlineKeyboardButton>> getAdminMenu(Update update) {
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
         long chatId = update.getMessage().getChatId();
@@ -229,5 +225,4 @@ public class BotResponseMapper {
             default -> new Locale("en");
         };
     }
-
 }
