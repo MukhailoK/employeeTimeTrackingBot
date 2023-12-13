@@ -140,20 +140,20 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             return;
         }
         if (update.hasCallbackQuery() && "/first".equals(update.getCallbackQuery().getData())) {
+            executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             String locale = userService.readUserFromTableByChatId(chatId).getLocale();
             log.info("admin initiated sending 'open report'");
-            executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             executeMessage(botResponseMapper.sendMessage(
                     botResponseMapper.getString("respond_open_shift", locale), chatId));
             sendMorningDailyMessageToAllUsers();
             return;
         }
         if (update.hasCallbackQuery() && "/second".equals(update.getCallbackQuery().getData())) {
+            executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             String locale = userService.readUserFromTableByChatId(chatId).getLocale();
             log.info("admin initiated sending 'close report'");
-            executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             executeMessage(botResponseMapper.sendMessage(
                     botResponseMapper.getString("respond_close_shift", locale), chatId));
             sendDailyMessageToAllUsers();
@@ -179,27 +179,33 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
             return;
         }
         if (update.hasCallbackQuery() && update.getCallbackQuery().getData().startsWith("open")) {
+            executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             log.info(update.getCallbackQuery().getData());
             String response = update.getCallbackQuery().getData().replaceAll("^open", "").trim();
             long chatID = Long.parseLong(response);
             User user = userService.readUserFromTableByChatId(chatID);
             sendOpenShiftRequestToUser(user);
+            executeMessage(botResponseMapper.sendMessage(user.getName() + ": " + botResponseMapper.getString("request_open_is_send", user.getLocale()), chatID));
+            sendAllUsers(update);
             return;
 
         }
         if (update.hasCallbackQuery() && update.getCallbackQuery().getData().startsWith("close")) {
+            executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             log.info(update.getCallbackQuery().getData());
             String response = update.getCallbackQuery().getData().replaceAll("^close", "").trim();
             long chatID = Long.parseLong(response);
             User user = userService.readUserFromTableByChatId(chatID);
             sendCloseShiftRequestToUser(user);
+            executeMessage(botResponseMapper.sendMessage(user.getName() + ": " + botResponseMapper.getString("request_close_is_send", user.getLocale()), chatID));
+            sendAllUsers(update);
             return;
         }
 
         if (update.hasCallbackQuery() && update.getCallbackQuery().getData().startsWith(USER_PREFIX)) {
+            executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
             User user = userService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
             User worker = userService.readUserFromTableByChatId(Long.valueOf(update.getCallbackQuery().getData().replaceAll("^" + USER_PREFIX, "")));
-            executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
 
             executeMessage(botResponseMapper.sendListOfObjects(botResponseMapper.getString("user_select", user.getLocale()) + " " + worker.getName()
                     , user.getChatId(), botResponseMapper.buildChosenUserMenu(update)));
