@@ -198,9 +198,10 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
 
         if (update.hasCallbackQuery() && update.getCallbackQuery().getData().startsWith(USER_PREFIX)) {
             User user = userService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
+            User worker = userService.readUserFromTableByChatId(Long.valueOf(update.getCallbackQuery().getData().replaceAll("^" + USER_PREFIX, "")));
             executeMessage(botResponseMapper.deleteLastBotMessage(update.getCallbackQuery().getMessage()));
 
-            executeMessage(botResponseMapper.sendListOfObjects(botResponseMapper.getString("user_select", user.getLocale() + user.getName())
+            executeMessage(botResponseMapper.sendListOfObjects(botResponseMapper.getString("user_select", user.getLocale()) + " " + worker.getName()
                     , user.getChatId(), botResponseMapper.buildChosenUserMenu(update)));
             return;
         }
