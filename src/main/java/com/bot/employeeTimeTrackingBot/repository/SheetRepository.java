@@ -10,5 +10,5 @@ public interface SheetRepository {
 
     int getLastRow(String sheetName);
 
-    boolean updateInto(List<Object> row, String updateRange, Sheets sheets, String tableId, SheetsService sheetsService);
+    boolean updateInto(List<Object> row, String updateRange, Sheets sheets, String tableId);
 }

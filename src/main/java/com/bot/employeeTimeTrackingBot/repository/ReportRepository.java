@@ -10,6 +10,7 @@ import static com.bot.employeeTimeTrackingBot.transformer.SheetsMapper.transform
 
 public interface ReportRepository {
     boolean updateReport(long chatId, double hours);
+    boolean updateReport(Report report);
 
     void sendFirstReportToTable(User userFromTable, Building building);
 

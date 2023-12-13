@@ -64,8 +64,7 @@ public class SheetRepositoryImpl implements SheetRepository {
     public boolean updateInto(List<Object> row,
                               String updateRange,
                               Sheets sheets,
-                              String tableId,
-                              SheetsService sheetsService) {
+                              String tableId) {
         ValueRange updateBody = new ValueRange().setValues(Collections.singletonList(row));
         UpdateValuesResponse result;
         try {
@@ -77,7 +76,7 @@ public class SheetRepositoryImpl implements SheetRepository {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        sheetsService.writeNext(SheetsName.LOGS, "!A", "!A",
+        writeNext(SheetsName.LOGS, "!A", "!A",
                 new ArrayList<>(Collections.singleton(row.toString())));
         return !result.isEmpty();
     }

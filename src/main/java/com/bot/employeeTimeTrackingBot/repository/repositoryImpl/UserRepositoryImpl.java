@@ -61,7 +61,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public List<User> getAllWorkingUsers() {
-        return getAllActualUsers().stream().filter(User::isAccess).toList();
+        return getAllActualUsers().stream().filter(User::isWorking).toList();
     }
 
     @Override
@@ -131,11 +131,11 @@ public class UserRepositoryImpl implements UserRepository {
             List<Object> row = values.get(i);
             if (row.size() >= 5 && Long.parseLong(row.get(5).toString()) == chatId) {
                 User user = SheetsMapper.transformToEntity(row);
-                user.setAccess(!user.isAccess());
+                user.setWorking(!user.isWorking());
                 row = SheetsMapper.transformToData(user);
                 range = "!A" + (2 + i);
                 String updateRange = USERS + range;
-                return sheetsService.updateInto(row, updateRange, sheets, tableId, sheetsService);
+                return sheetsService.updateInto(row, updateRange, sheets, tableId);
             }
         }
         return false;

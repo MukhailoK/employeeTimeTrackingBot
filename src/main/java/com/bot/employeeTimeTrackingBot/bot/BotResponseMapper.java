@@ -22,6 +22,7 @@ import java.util.*;
 @Component
 public class BotResponseMapper {
     public static final String ADDRESS_PREFIX = "adr:";
+    public static final String USER_PREFIX = "usr:";
     private final UserService userService;
 
     @Autowired
@@ -176,8 +177,100 @@ public class BotResponseMapper {
         thirdRow.add(button3);
         rowsInLine.add(thirdRow);
         return rowsInLine;
-
     }
+
+    public List<List<InlineKeyboardButton>> buildChosenUserMenu(Update update) {
+        String userName = update.getCallbackQuery().getData().replaceAll("^" + USER_PREFIX, "");
+
+        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
+        InlineKeyboardButton button1 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> firstRow = new ArrayList<>();
+        String locale = userService.readUserFromTableByChatId(chatId).getLocale();
+
+        button1.setText(getString("send_request_open_shift", locale));
+        button1.setCallbackData("open" + userName);
+        firstRow.add(button1);
+        rowsInLine.add(firstRow);
+
+        InlineKeyboardButton button2 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> secondRow = new ArrayList<>();
+        button2.setText(getString("send_request_close_shift", locale));
+        button2.setCallbackData("close" + userName);
+        secondRow.add(button2);
+        rowsInLine.add(secondRow);
+
+        InlineKeyboardButton button3 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> thirdRow = new ArrayList<>();
+        button3.setText(getString("back", locale));
+        button3.setCallbackData("back_toUserList");
+        thirdRow.add(button3);
+        rowsInLine.add(thirdRow);
+
+        return rowsInLine;
+    }
+
+    public List<List<InlineKeyboardButton>> buildAdminMenu(Update update) {
+        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+        long chatId;
+        if (update.hasMessage()) {
+            chatId = update.getMessage().getChatId();
+        } else {
+            chatId = update.getCallbackQuery().getMessage().getChatId();
+        }
+
+        InlineKeyboardButton button1 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> firstRow = new ArrayList<>();
+        String locale = userService.readUserFromTableByChatId(chatId).getLocale();
+
+        button1.setText(getString("get_workers_list", locale));
+        button1.setCallbackData("workersList");
+        firstRow.add(button1);
+        rowsInLine.add(firstRow);
+
+        InlineKeyboardButton button2 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> secondRow = new ArrayList<>();
+        button2.setText(getString("request_open_shift", locale));
+        button2.setCallbackData("/first");
+        secondRow.add(button2);
+        rowsInLine.add(secondRow);
+
+        InlineKeyboardButton button3 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> thirdRow = new ArrayList<>();
+        button3.setText(getString("request_close_shift", locale));
+        button3.setCallbackData("/second");
+        thirdRow.add(button3);
+        rowsInLine.add(thirdRow);
+
+        InlineKeyboardButton button4 = new InlineKeyboardButton();
+        List<InlineKeyboardButton> fourthRow = new ArrayList<>();
+        button4.setText(getString("exit", locale));
+        button4.setCallbackData("/exit");
+        fourthRow.add(button4);
+        rowsInLine.add(fourthRow);
+        return rowsInLine;
+    }
+
+    public List<List<InlineKeyboardButton>> getRowsInLineWithUsers(String locale) {
+        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
+        List<User> users = userService.getAllActualUsers();
+        for (User user : users) {
+            List<InlineKeyboardButton> rowLine = new ArrayList<>();
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(user.getName());
+            button.setCallbackData(USER_PREFIX + user.getChatId());
+            rowLine.add(button);
+            rowsInLine.add(rowLine);
+        }
+        InlineKeyboardButton backButton = new InlineKeyboardButton();
+        List<InlineKeyboardButton> lastRow = new ArrayList<>();
+        backButton.setText(getString("back", locale));
+        backButton.setCallbackData("back_toAdminMenu");
+        lastRow.add(backButton);
+        rowsInLine.add(lastRow);
+        return rowsInLine;
+    }
+
 
     public String getString(String key, String locale) {
         Locale userLocale = determineUserLocale(locale);

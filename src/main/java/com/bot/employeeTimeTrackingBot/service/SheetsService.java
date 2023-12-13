@@ -25,8 +25,8 @@ public class SheetsService {
         return sheetRepository.getLastRow(sheetName);
     }
 
-    public boolean updateInto(List<Object> row, String updateRange, Sheets sheets, String tableId, SheetsService sheetsService) {
-        return sheetRepository.updateInto(row, updateRange, sheets, tableId, sheetsService);
+    public boolean updateInto(List<Object> row, String updateRange, Sheets sheets, String tableId) {
+        return sheetRepository.updateInto(row, updateRange, sheets, tableId);
     }
 
 }

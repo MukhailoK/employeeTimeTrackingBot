@@ -8,7 +8,7 @@ import lombok.*;
 @ToString
 @AllArgsConstructor
 public class User {
-    private boolean access;
+    private boolean isWorking;
     private boolean isSendReport;
     private String name;
     private String dateConnecting;

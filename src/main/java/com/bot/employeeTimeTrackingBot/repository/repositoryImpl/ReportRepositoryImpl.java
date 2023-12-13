@@ -58,13 +58,40 @@ public class ReportRepositoryImpl implements ReportRepository {
                     row.set(1, ZonedDateTime.
                             now(ZoneId.of("Europe/Berlin")).format(dateTimeFormatter));
                     row.add(5, hours);
-                    return sheetsService.updateInto(row, updateRange, sheets, tableId, sheetsService);
+                    return sheetsService.updateInto(row, updateRange, sheets, tableId);
                 }
             }
         }
         return false;
     }
 
+    @Override
+    public boolean updateReport(Report report) {
+        String range = SheetsName.REPORTS + "!A2:H";
+        ValueRange response;
+        try {
+            response = sheets.spreadsheets().values().get(tableId, range).execute();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        List<List<Object>> values = response.getValues();
+        for (int i = 0; i < values.size(); i++) {
+            List<Object> row = values.get(i);
+            if (row.size() >= 3 && Long.parseLong(row.get(2).toString()) == report.getChatId()) {
+                if (row.get(1) == null || row.get(1).toString().isEmpty()) {
+                    String range1 = "!A" + (2 + i);
+                    String updateRange = SheetsName.REPORTS + range1;
+                    row.set(1, ZonedDateTime.
+                            now(ZoneId.of("Europe/Berlin")).format(dateTimeFormatter));
+                    row.set(5, report.getHours());
+                    row.add(7, report.getLastPlaceUrl());
+                    return sheetsService.updateInto(row, updateRange, sheets, tableId);
+                }
+            }
+        }
+        return false;
+
+    }
 
     @Override
     public void sendFirstReportToTable(User userFromTable, Building building) {

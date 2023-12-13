@@ -44,7 +44,7 @@ public class UserService {
             user.setName(name);
             user.setChatId(chatId);
             user.setNickName(nickName);
-            user.setAccess(false);
+            user.setWorking(false);
             user.setSendReport(false);
             user.setDateConnecting(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
             user.setLocale(message.getFrom().getLanguageCode());

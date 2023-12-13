@@ -30,6 +30,10 @@ public class ReportService {
         return reportRepository.updateReport(chatId, hours);
     }
 
+    public boolean updateReport(Report report){
+        return reportRepository.updateReport(report);
+    }
+
 
     public String getUrl(Location location) {
         double latitude = location.getLatitude();

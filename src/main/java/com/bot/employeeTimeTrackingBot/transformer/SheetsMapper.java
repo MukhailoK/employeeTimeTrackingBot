@@ -11,7 +11,7 @@ import java.util.List;
 public class SheetsMapper {
 
     public static List<Object> transformToData(User user) {
-        return Arrays.asList(user.isAccess(),
+        return Arrays.asList(user.isWorking(),
                 user.isSendReport(),
                 user.getLocale() == null ? "" : user.getLocale(),
                 user.getName() == null ? "" : user.getName(),
@@ -30,7 +30,7 @@ public class SheetsMapper {
                 report.getUserName() == null ? "" : report.getUserName(),
                 report.getBuilding().getAddress() == null ? "" : report.getBuilding().getAddress(),
                 report.getHours() == 0 ? "" : report.getHours(),
-                report.getPlaceUrl() == null ? "" : report.getPlaceUrl()
+                report.getFirstPlaceUrl() == null ? "" : report.getFirstPlaceUrl()
         );
     }
 
@@ -42,7 +42,7 @@ public class SheetsMapper {
         report.setUserName(String.valueOf(cells.get(3)));
         report.setBuilding(new Building(String.valueOf(cells.get(4)), true));
         report.setHours(Double.parseDouble(String.valueOf(cells.get(5))));
-        report.setPlaceUrl(String.valueOf(cells.get(6)));
+        report.setFirstPlaceUrl(String.valueOf(cells.get(6)));
         return report;
     }
 
@@ -57,7 +57,7 @@ public class SheetsMapper {
 
     public static User transformToEntity(List<Object> cells) {
         User user = new User();
-        user.setAccess(Boolean.parseBoolean(cells.get(0).toString()));
+        user.setWorking(Boolean.parseBoolean(cells.get(0).toString()));
         user.setSendReport(Boolean.parseBoolean(cells.get(1).toString()));
         int size = cells.size();
         if (size >= 3) {

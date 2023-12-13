@@ -16,5 +16,6 @@ public class Report {
     private String userName;
     private Building building;
     private double hours;
-    private String placeUrl;
+    private String FirstPlaceUrl;
+    private String LastPlaceUrl;
 }
