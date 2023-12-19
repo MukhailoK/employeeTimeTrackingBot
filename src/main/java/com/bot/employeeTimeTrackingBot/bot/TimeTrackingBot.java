@@ -220,17 +220,26 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
 
     public void morningReportsCatcher(Update update) throws TelegramApiException {
         if (update.hasCallbackQuery() && "first".equals(update.getCallbackQuery().getData())) {
-            deleteLastMessageAndRequestLocation(update);
+            User user = userService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
+            if (!user.isWorking()) {
+                deleteLastMessageAndRequestLocation(update);
+                return;
+            } else {
+                executeMessage(botResponseMapper.sendMessage(botResponseMapper.getString("shift_already_open", user.getLocale()), user.getChatId()));
+            }
             return;
         }
 
         if (update.hasMessage() && update.getMessage().hasLocation() && !userService.readUserFromTableByChatId(update.getMessage().getChatId()).isWorking()) {
             removeKeyboard(update);
-
+            String locale = update.getMessage().getFrom().getLanguageCode();
             reportDrafts.get(update.getMessage().getChatId())
                     .setFirstPlaceUrl(reportService.getUrl(update.getMessage()
                             .getLocation()));
-            executeMessage(botResponseMapper.sendMessageWithButton(update.getMessage().getChatId(), "get list of objects", "list", "obj"));
+            executeMessage(botResponseMapper.sendMessageWithButton(update.getMessage().getChatId()
+                    , botResponseMapper.getString("get_list_of_address", locale)
+                    , botResponseMapper.getString("download", locale)
+                    , "obj"));
             return;
         }
         if (update.hasCallbackQuery() && "obj".equals(update.getCallbackQuery().getData()) &&
@@ -259,7 +268,13 @@ public class TimeTrackingBot extends TelegramLongPollingBot {
 
     private void eveningReportsCatcher(Update update) throws Exception {
         if (update.hasCallbackQuery() && "second".equals(update.getCallbackQuery().getData())) {
-            deleteLastMessageAndRequestLocation(update);
+            User user = userService.readUserFromTableByChatId(update.getCallbackQuery().getMessage().getChatId());
+            if (user.isWorking()) {
+                deleteLastMessageAndRequestLocation(update);
+                return;
+            } else {
+                executeMessage(botResponseMapper.sendMessage(botResponseMapper.getString("shift_not_open", user.getLocale()), user.getChatId()));
+            }
             return;
         }
         if (update.hasCallbackQuery() && "ignor".equals(update.getCallbackQuery().getData())) {
